@@ -12,7 +12,7 @@ You need three things installed: **Node.js**, **Git**, and **Claude Code**.
 Then, in Terminal:
 
 ```bash
-git clone https://github.com/OWNER/adit-daily.git
+git clone https://github.com/maaaarish5-arch/adit-daily.git
 cd adit-daily
 npm install
 claude
