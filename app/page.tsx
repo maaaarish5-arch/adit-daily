@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import RosterView from "./roster-view";
 import CheckinView from "./checkin-view";
-import LogsView from "./logs-view";
+import DumpView from "./dump-view";
 import {
   cleanEntries,
   coverageOf,
@@ -57,7 +57,7 @@ import {
 
 type MonthData = Record<string, { done: number; percent: number }>;
 type SyncState = "idle" | "saving" | "saved" | "error";
-type Tab = "today" | "checkin" | "students" | "logs" | "sop";
+type Tab = "today" | "checkin" | "students" | "tasks" | "sop";
 
 const PASSCODE_KEY = "adit-daily:passcode";
 
@@ -210,8 +210,8 @@ export default function Page() {
 
   /* ------------------------- presence heartbeat ----------------------------- */
   // A ping while the tab is open and visible. The server buckets these into
-  // five-minute slots, which is what the Logs tab reads to show whether he was
-  // actually on it between clocking in and clocking out.
+  // five-minute slots in the append-only activity log (`/api/log`). The Time
+  // logs tab that displayed them has been replaced by the Checklist tab.
 
   useEffect(() => {
     const ping = (kind?: string) => {
@@ -729,8 +729,8 @@ export default function Page() {
         >
           Students
         </button>
-        <button data-on={String(tab === "logs")} onClick={() => setTab("logs")}>
-          Time logs
+        <button data-on={String(tab === "tasks")} onClick={() => setTab("tasks")}>
+          Checklist
         </button>
         <button data-on={String(tab === "sop")} onClick={() => setTab("sop")}>
           SOP
@@ -743,8 +743,8 @@ export default function Page() {
         </div>
       )}
 
-      {tab === "logs" ? (
-        <LogsView />
+      {tab === "tasks" ? (
+        <DumpView />
       ) : tab === "checkin" ? (
         <CheckinView />
       ) : tab === "students" ? (

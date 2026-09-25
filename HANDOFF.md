@@ -71,7 +71,7 @@ Five tabs:
 - **Today** — the checklist, the clock in/out, and the nightly close-out report
 - **Check-in** — who you took an update from today, and what came of it
 - **Students** — the roster, payment plans, instalments, what is owed
-- **Time logs** — an append-only record of your clock events and time on the page
+- **Checklist** — your brain-dump list: every loose task, each with a priority (Highest, Urgent, Important)
 - **SOP** — every procedure, every script, every link
 
 The checklist, the report and the SOP all come from one file (`lib/tasks.ts`),

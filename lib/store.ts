@@ -17,6 +17,7 @@ import {
   cleanEvent,
   type LogEvent,
 } from "./activity";
+import { cleanTasks, EMPTY_DUMP, type DumpDoc, type DumpTask } from "./dump";
 import {
   cleanEntries,
   EMPTY_CHECKIN,
@@ -226,6 +227,50 @@ function parseCheckin(raw: unknown): CheckinDoc {
     };
   } catch {
     return EMPTY_CHECKIN;
+  }
+}
+
+/* ------------------------------- brain dump ------------------------------- */
+// One key, one document: the whole task list, not tied to a day. Read and
+// written whole, last-write-wins, same as the roster.
+
+const DUMP_KEY = "adit:dump";
+const DUMP_FILE = path.join(process.cwd(), ".data", "dump.json");
+
+export async function getDump(): Promise<DumpDoc> {
+  if (usingRedis) {
+    return parseDump(await redisCommand(["GET", DUMP_KEY]));
+  }
+  assertLocal();
+  try {
+    return parseDump(await fs.readFile(DUMP_FILE, "utf8"));
+  } catch {
+    return EMPTY_DUMP;
+  }
+}
+
+export async function putDump(tasks: DumpTask[]): Promise<DumpDoc> {
+  const saved: DumpDoc = { tasks, updatedAt: new Date().toISOString() };
+  if (usingRedis) {
+    await redisCommand(["SET", DUMP_KEY, JSON.stringify(saved)]);
+    return saved;
+  }
+  assertLocal();
+  await fs.mkdir(path.dirname(DUMP_FILE), { recursive: true });
+  await fs.writeFile(DUMP_FILE, JSON.stringify(saved, null, 2), "utf8");
+  return saved;
+}
+
+function parseDump(raw: unknown): DumpDoc {
+  if (!raw) return EMPTY_DUMP;
+  try {
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return {
+      tasks: cleanTasks(parsed?.tasks),
+      updatedAt: parsed?.updatedAt ?? null,
+    };
+  } catch {
+    return EMPTY_DUMP;
   }
 }
 

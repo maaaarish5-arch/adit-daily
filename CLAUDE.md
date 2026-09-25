@@ -69,7 +69,7 @@ top — ink background, bone text, one lime signal colour. Match what is there.
 | `app/page.tsx` | Tabs, checklist, clock, close-out report |
 | `app/roster-view.tsx` | Students tab |
 | `app/checkin-view.tsx` | Check-in tab |
-| `app/logs-view.tsx` | Time logs tab |
+| `app/dump-view.tsx` | Checklist tab � the free-form brain-dump task list (`lib/dump.ts`, `/api/dump`, Redis key `adit:dump`). Separate from the scored daily checklist in `lib/tasks.ts`. |
 | `app/date-field.tsx` | Day/month/year dropdowns — read the comment before editing |
 
 Data lives in Upstash Redis, keyed `adit:*`. Credentials are environment
