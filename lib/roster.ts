@@ -242,6 +242,44 @@ export function summarise(s: Student): PaymentSummary {
   return { total, paid, remaining, status, nextDue, overdue, legacy: false };
 }
 
+/** One instalment falling due on a given day, with enough context to show it. */
+export type DueItem = {
+  student: Student;
+  installment: Installment;
+  /** 1-based position in the student's schedule, by due date; `of` counts
+   *  every instalment, dated or not. */
+  number: number;
+  of: number;
+};
+
+/**
+ * Every instalment scheduled for `day` (YYYY-MM-DD), read straight off the
+ * instalment dates. Unpaid first, then the ones already in; A-Z within each.
+ */
+export function dueOn(students: Student[], day: string): DueItem[] {
+  const out: DueItem[] = [];
+  for (const student of students) {
+    const dated = student.installments
+      .filter((i) => i.due)
+      .sort((a, b) => a.due.localeCompare(b.due));
+    dated.forEach((installment, idx) => {
+      if (installment.due === day) {
+        // Undated instalments still count toward "of", so 1 of 2 stays honest.
+        out.push({
+          student,
+          installment,
+          number: idx + 1,
+          of: student.installments.length,
+        });
+      }
+    });
+  }
+  return out.sort((a, b) => {
+    if (a.installment.paid !== b.installment.paid) return a.installment.paid ? 1 : -1;
+    return a.student.name.localeCompare(b.student.name);
+  });
+}
+
 export type Totals = {
   students: number;
   active: number;

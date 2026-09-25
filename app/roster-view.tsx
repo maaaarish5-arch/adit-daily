@@ -9,6 +9,7 @@ import {
   STATUSES,
   blankInstallment,
   blankStudent,
+  dueOn,
   longDay,
   money,
   outstandingLabel,
@@ -20,6 +21,7 @@ import {
   type Status,
   type Student,
 } from "@/lib/roster";
+import { shiftDays } from "@/lib/date";
 
 type SyncState = "idle" | "saving" | "saved" | "error";
 
@@ -36,6 +38,9 @@ export default function RosterView() {
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [openPay, setOpenPay] = useState<string | null>(null);
+  /** The day the "due" tracker is looking at. Null until mounted - it comes
+   *  from the device clock, so it cannot be rendered on the server. */
+  const [dueDay, setDueDay] = useState<string | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** True from the moment a field is edited until that edit is safely saved. */
@@ -60,6 +65,7 @@ export default function RosterView() {
 
   useEffect(() => {
     load(true);
+    setDueDay(today());
   }, [load]);
 
   // Poll so Dr. Marish sees Adit's edits without reloading — but hold off while
@@ -222,6 +228,10 @@ export default function RosterView() {
   }, [students, monthFilter, statusFilter, paymentFilter, query]);
 
   const all = totals(students);
+  const due = useMemo(
+    () => (dueDay ? dueOn(students, dueDay) : []),
+    [students, dueDay]
+  );
   const view = totals(shown);
   const filtered = shown.length !== students.length;
 
@@ -280,6 +290,91 @@ export default function RosterView() {
           <span>outstanding</span>
         </div>
       </div>
+
+      {/* ------------------ who is due to pay on the chosen day ------------------ */}
+      {dueDay && (() => {
+        const isToday = dueDay === today();
+        const unpaid = due.filter((d) => !d.installment.paid);
+        const owed = CURRENCIES.map((c) => ({
+          c,
+          n: unpaid
+            .filter((d) => d.student.currency === c)
+            .reduce((sum, d) => sum + d.installment.amount, 0),
+        })).filter((x) => x.n > 0);
+        return (
+          <section className="due">
+            <div className="due-head">
+              <h3>{isToday ? "Due today" : `Due on ${longDay(dueDay)}`}</h3>
+              <span className="hair" />
+              <div className="due-nav">
+                <button
+                  className="btn ghost"
+                  onClick={() => setDueDay(shiftDays(dueDay, -1))}
+                  aria-label="Previous day"
+                >
+                  ←
+                </button>
+                <button
+                  className="btn ghost"
+                  onClick={() => setDueDay(today())}
+                  disabled={isToday}
+                >
+                  Today
+                </button>
+                <button
+                  className="btn ghost"
+                  onClick={() => setDueDay(shiftDays(dueDay, 1))}
+                  aria-label="Next day"
+                >
+                  →
+                </button>
+              </div>
+            </div>
+
+            {due.length === 0 ? (
+              <p className="due-empty">
+                {isToday
+                  ? "No clients due today"
+                  : `No clients due on ${longDay(dueDay)}`}
+              </p>
+            ) : (
+              <>
+                <p className="due-sum">
+                  <b>{unpaid.length}</b> {unpaid.length === 1 ? "client" : "clients"} to
+                  pay
+                  {owed.length > 0 && <> · {owed.map((x) => money(x.n, x.c)).join(" · ")}</>}
+                  {due.length > unpaid.length && (
+                    <> · {due.length - unpaid.length} already paid</>
+                  )}
+                </p>
+                <div className="due-list">
+                  {due.map((d) => (
+                    <div
+                      className="due-row"
+                      key={`${d.student.id}-${d.installment.id}`}
+                      data-paid={String(d.installment.paid)}
+                    >
+                      <span className="due-name">
+                        {d.student.name || "(unnamed)"}
+                        {d.student.status !== "Active" && <i> · {d.student.status}</i>}
+                      </span>
+                      <span className="due-which">
+                        Instalment {d.number} of {d.of}
+                      </span>
+                      <span className="due-amt">
+                        {money(d.installment.amount, d.student.currency)}
+                      </span>
+                      <span className="due-state">
+                        {d.installment.paid ? "Paid ✓" : "Due"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+        );
+      })()}
 
       <div className="filters">
         <input
