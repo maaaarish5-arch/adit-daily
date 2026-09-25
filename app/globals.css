@@ -1670,6 +1670,11 @@ select.cell {
   color: var(--rust);
 }
 
+.band.active,
+.band.completed {
+  color: var(--signal-deep);
+}
+
 .btn.ghost[data-on="true"] {
   color: var(--signal);
   border-color: var(--signal-deep);

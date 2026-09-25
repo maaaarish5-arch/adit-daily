@@ -42,17 +42,21 @@ export function cleanEntries(raw: unknown): Entries {
 
 export type Row = Student & { archived?: boolean };
 
+/** Section order: Active → Completed → Paused → Left → Archived. */
 export function rankOf(s: Row): number {
-  if (s.archived) return 4;
-  if (s.status === "Left") return 3;
-  if (s.status === "Paused") return 2;
+  if (s.archived) return 5;
+  if (s.status === "Left") return 4;
+  if (s.status === "Paused") return 3;
+  if (s.status === "Completed") return 2;
   return 1;
 }
 
 export const BANDS: Record<number, { cls: string; label: string }> = {
-  2: { cls: "paused", label: "Paused" },
-  3: { cls: "left", label: "Left" },
-  4: { cls: "archived", label: "Archived — no longer on the tracker" },
+  1: { cls: "active", label: "Active" },
+  2: { cls: "completed", label: "Completed" },
+  3: { cls: "paused", label: "Paused" },
+  4: { cls: "left", label: "Left" },
+  5: { cls: "archived", label: "Archived — no longer on the tracker" },
 };
 
 /** Roster rows plus any orphaned entries from this day, in display order. */
