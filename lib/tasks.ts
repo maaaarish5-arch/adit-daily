@@ -96,9 +96,7 @@ const INTRO_MESSAGE = `Hey,
 
 My name is Adit, and I'll be your accountability partner through your USMLE journey.
 
-A bit about myself — I love getting to know the people I work with. Your story, what drives you, where you've been and where you want to go. That helps me support you the right way, with a plan that actually fits you.
-
-You'll be hearing from me regularly to make sure your prep is structured, on track, and working for you. I'm just as invested in your success as Dr. Asudani, and between the two of us, you'll have everything you need to get there.`;
+You'll be hearing from me regularly to make sure your prep is structured, on track, and working for you. I'm just as invested in your success as Dr. Marish, and between the two of us, you'll have everything you need to get there!`;
 
 const REGISTRATION_MESSAGE = `If you have not already started working on your Step 1 registration, here's how you can do it —
 
