@@ -3,7 +3,7 @@
 // One document per day: `adit:checkin:YYYY-MM-DD`. The roster supplies who
 // exists; this supplies what happened. Adit ticks, Dr. Marish sees the same day.
 
-import type { Student } from "./roster";
+import { MONTHS, type Student } from "./roster";
 
 export type Entry = {
   /** Checked — an update was taken. */
@@ -42,7 +42,8 @@ export function cleanEntries(raw: unknown): Entries {
 
 export type Row = Student & { archived?: boolean };
 
-/** Section order: Active → Completed → Paused → Left → Archived. */
+/** Section order: Active → Completed → Paused → Left → Archived.
+ *  Inside a section, newest join month first. */
 export function rankOf(s: Row): number {
   if (s.archived) return 5;
   if (s.status === "Left") return 4;
@@ -78,11 +79,26 @@ export function buildRows(students: Student[], entries: Entries): Row[] {
       archived: true,
     }));
 
-  return [...students, ...orphans].sort((a, b) => {
+  const all = [...students, ...orphans];
+  const order = new Map(all.map((r, i) => [r.id, i]));
+  const now = new Date().getMonth();
+  return all.sort((a, b) => {
     const r = rankOf(a) - rankOf(b);
     if (r !== 0) return r;
-    return a.name.localeCompare(b.name);
+    const m = monthsAgo(b.month, now) - monthsAgo(a.month, now);
+    if (m !== 0) return -m;
+    // Same join month: whoever was added to the roster later joined later.
+    return order.get(b.id)! - order.get(a.id)!;
   });
+}
+
+/** How many months ago a join month was, assuming it falls in the last year.
+ *  The roster stores only the month name, so a month later than this one is
+ *  read as last year's — January 2027 sorts above December 2026. */
+function monthsAgo(month: string, now: number): number {
+  const i = MONTHS.indexOf(month as (typeof MONTHS)[number]);
+  if (i < 0) return 12;
+  return (now - i + 12) % 12;
 }
 
 export function entryFor(entries: Entries, id: string): Entry {
