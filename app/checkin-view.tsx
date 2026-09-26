@@ -7,6 +7,7 @@ import {
   BANDS,
   buildRows,
   entryFor,
+  owedRows,
   rankOf,
   takenCount,
   type Entries,
@@ -129,18 +130,22 @@ export default function CheckinView() {
 
   /* -------------------------------- derived -------------------------------- */
 
-  const rows = useMemo(() => buildRows(students, entries), [students, entries]);
+  const allRows = useMemo(() => buildRows(students, entries), [students, entries]);
+  // The day is about Active students only. Completed, Paused, Left and removed
+  // students stay out of the list, the bar and the copy — until their name is
+  // searched, so a status can still be looked up.
+  const rows = useMemo(() => owedRows(allRows), [allRows]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return rows.filter((r) => {
+    return (q ? allRows : rows).filter((r) => {
       if (month !== "all" && r.month !== month) return false;
       if (openOnly && entryFor(entries, r.id).c) return false;
       if (q && !`${r.name} ${entryFor(entries, r.id).n}`.toLowerCase().includes(q))
         return false;
       return true;
     });
-  }, [rows, entries, month, openOnly, query]);
+  }, [allRows, rows, entries, month, openOnly, query]);
 
   const taken = takenCount(rows, entries);
   const total = rows.length;
@@ -254,7 +259,7 @@ export default function CheckinView() {
           className="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search name or note…"
+          placeholder="Search any student by name…"
         />
         <select value={month} onChange={(e) => setMonth(e.target.value)}>
           <option value="all">All months</option>
@@ -276,16 +281,16 @@ export default function CheckinView() {
 
       {loading ? (
         <p className="skeleton">Loading {longDate(date)}…</p>
-      ) : total === 0 ? (
+      ) : total === 0 && !query.trim() ? (
         <p className="empty">
-          Nobody on the roster yet. Add students in the <b>Students</b> tab and
-          they appear here automatically.
+          No active students right now. Add students in the <b>Students</b> tab,
+          or search a name to find someone who is Completed, Paused or Left.
         </p>
       ) : visible.length === 0 ? (
         <p className="empty">
           {openOnly
             ? "Everyone has been reached. That's the whole roster done."
-            : "No one matches that. Clear the search or switch months."}
+            : "No one matches that — on any status. Clear the search or switch months."}
         </p>
       ) : (
         visible.map((r: Row) => {
