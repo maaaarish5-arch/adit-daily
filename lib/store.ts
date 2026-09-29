@@ -12,6 +12,7 @@ import path from "node:path";
 import type { DayKey } from "./date";
 import type { Ticks } from "./tasks";
 import { cleanRoster, EMPTY_ROSTER, type Roster, type Student } from "./roster";
+import { cleanTodos, type Todo } from "./todos";
 import {
   cleanBuckets,
   cleanEvent,
@@ -332,6 +333,47 @@ export async function getActivity(
     .filter(Boolean) as LogEvent[];
 
   return { events, buckets: cleanBuckets(rawBuckets ?? []) };
+}
+
+/* --------------------------------- to-dos --------------------------------- */
+// One key, one list. Project work with owners and deadlines — deliberately kept
+// out of the daily score, so an open build task never costs Adit his grade.
+
+const TODOS_KEY = "adit:todos";
+const TODOS_FILE = path.join(process.cwd(), ".data", "todos.json");
+
+export async function getTodos(): Promise<{ todos: Todo[]; updatedAt: string | null }> {
+  if (usingRedis) return parseTodos(await redisCommand(["GET", TODOS_KEY]));
+  assertLocal();
+  try {
+    return parseTodos(await fs.readFile(TODOS_FILE, "utf8"));
+  } catch {
+    return { todos: [], updatedAt: null };
+  }
+}
+
+export async function putTodos(
+  todos: Todo[]
+): Promise<{ todos: Todo[]; updatedAt: string | null }> {
+  const saved = { todos, updatedAt: new Date().toISOString() };
+  if (usingRedis) {
+    await redisCommand(["SET", TODOS_KEY, JSON.stringify(saved)]);
+    return saved;
+  }
+  assertLocal();
+  await fs.mkdir(path.dirname(TODOS_FILE), { recursive: true });
+  await fs.writeFile(TODOS_FILE, JSON.stringify(saved, null, 2), "utf8");
+  return saved;
+}
+
+function parseTodos(raw: unknown): { todos: Todo[]; updatedAt: string | null } {
+  if (!raw) return { todos: [], updatedAt: null };
+  try {
+    const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return { todos: cleanTodos(parsed?.todos), updatedAt: parsed?.updatedAt ?? null };
+  } catch {
+    return { todos: [], updatedAt: null };
+  }
 }
 
 /* ------------------------------- Public API ------------------------------- */
