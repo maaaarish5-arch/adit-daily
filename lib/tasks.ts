@@ -700,6 +700,23 @@ export const SECTIONS: Section[] = [
             kind: "pending",
             text: "Dr. Marish is confirming which calendar file is the live one. Until then, check with him before publishing.",
           },
+          {
+            kind: "p",
+            text: "Music — one track per set, and it runs continuously. When several stories go up together, pick a single track for the whole set and carry it across every story so it plays as one unbroken piece rather than restarting on each frame.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Look at everything going up in that batch first. If the stories belong together, they share one track — decide it before you upload the first one.",
+              "Choose the track once, against the set as a whole, not against the first story.",
+              "Carry it through every story in the set, continuing from where the previous one ended rather than starting the track again.",
+              "A story that clearly doesn't belong to the set — a different subject, a different day's content — takes its own track. The rule is one track per set, not one track per day.",
+            ],
+          },
+          {
+            kind: "warn",
+            text: "Three similar stories with three different songs, or the same song restarting three times, reads as sloppy and breaks the run. Someone tapping through should hear one continuous piece.",
+          },
         ],
       },
     ],
