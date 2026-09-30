@@ -58,6 +58,14 @@ export type Section = {
   title: string;
   /** When set, a switch in the section head marks the whole section N/A today. */
   skip?: { id: string; label: string };
+  /**
+   * Whose checklist this is, when it is not Adit's. An owned section shows on
+   * Today and in the SOP like any other, but stays out of Adit's score and
+   * gets its own line in the nightly report.
+   */
+  owner?: string;
+  /** A reference panel under the rows — links and notes, nothing to tick. */
+  corner?: { title: string; blocks: SopBlock[] };
   tasks: Task[];
 };
 
@@ -188,6 +196,110 @@ Adit`;
 /* -------------------------------- sections -------------------------------- */
 
 export const SECTIONS: Section[] = [
+  {
+    id: "shreeman",
+    title: "Shreeman · CSM · client fulfilment",
+    owner: "Shreeman",
+    tasks: [
+      {
+        id: "sh-am-read",
+        label: "Morning — every outstanding client message read",
+        detail:
+          "As soon as you're up. Go through everything received from every client and gather the insights from each message.",
+        sop: [
+          {
+            kind: "p",
+            text: "Read every outstanding message from every client. For each one, pull out what it actually tells us — progress, a problem, a question, a request.",
+          },
+        ],
+      },
+      {
+        id: "sh-am-marish",
+        label: "Morning — written down wherever Dr. Marish is required",
+        sop: [
+          {
+            kind: "p",
+            text: "From what you gathered, write down every touchpoint where Dr. Marish is required.",
+          },
+        ],
+      },
+      {
+        id: "sh-am-adit",
+        label: "Adit has reviewed every Dr. Marish touchpoint",
+        detail:
+          "Adit confirms whether Dr. Marish is really required on each one. Only then move forward.",
+        sop: [
+          {
+            kind: "p",
+            text: "Send Adit the list and ask him to review every single touchpoint. He confirms whether Dr. Marish is really required or not.",
+          },
+          {
+            kind: "warn",
+            text: "Nothing moves forward until Adit has confirmed. Dr. Marish only sees the points Adit approves.",
+          },
+        ],
+      },
+      {
+        id: "sh-calls",
+        label: "Client calls with Dr. Marish coordinated",
+        detail: "If a client needs a call with Dr. Marish, set it up and raise it at the standup.",
+        sop: [
+          {
+            kind: "p",
+            text: "If a client needs a call with Dr. Marish, you coordinate it, and you tell Dr. Marish about it during the standup itself.",
+          },
+        ],
+      },
+      {
+        id: "sh-standup",
+        label: "11:00 standup — client resolutions with Dr. Marish",
+        detail:
+          "Dr. Marish resolves client issues in real time — only the points Adit approved.",
+        sop: [
+          {
+            kind: "p",
+            text: "The daily standup is at 11:00. Dr. Marish does all the client resolutions in real time. He only has to go through the points Adit has approved as actually needing him.",
+          },
+        ],
+      },
+      {
+        id: "sh-pointers",
+        label: "After the standup — Dr. Marish's pointers acted on",
+        sop: [
+          {
+            kind: "p",
+            text: "Once the client resolutions are done, Dr. Marish tells you any pointers you need to look into. Act on every one.",
+          },
+        ],
+      },
+      {
+        id: "sh-pm-checkins",
+        label: "Afternoon — first round of client check-ins done",
+        detail: "Go through every client chat and complete the first round of check-ins.",
+      },
+      {
+        id: "sh-pm-marish",
+        label: "Afternoon — Dr. Marish points written down, Adit pinged to confirm",
+        detail:
+          "Before the standup, ping Adit to check where Dr. Marish is actually required.",
+        sop: [
+          {
+            kind: "p",
+            text: "After the check-ins, write down again wherever Dr. Marish is required. Before the standup, ping Adit and ask him to check which of those really need Dr. Marish — so at the standup Dr. Marish only goes through what Adit approved.",
+          },
+        ],
+      },
+    ],
+    corner: {
+      title: "Client resources",
+      blocks: [
+        {
+          kind: "pending",
+          text: "The resources page for clients is still being built. Resource links will be added here once it's ready.",
+        },
+      ],
+    },
+  },
   {
     id: "morning",
     title: "Morning shift · 10:00–12:00 IST",
@@ -918,6 +1030,34 @@ export type Playbook = {
 
 export const PLAYBOOKS: Playbook[] = [
   {
+    id: "fulfilment",
+    title: "Client fulfilment workflow — Shreeman",
+    blurb:
+      "The daily ops loop for the CSM: gather, filter through Adit, resolve at the standup, act.",
+    blocks: [
+      {
+        kind: "steps",
+        items: [
+          "Morning, as soon as Shreeman wakes up — go through all outstanding messages from every client and gather the insights.",
+          "Write down wherever Dr. Marish is required.",
+          "Ask Adit to review every single touchpoint. Adit confirms whether Dr. Marish is really required. Only then move forward.",
+          "11:00 — daily standup. Dr. Marish does all the client resolutions in real time.",
+          "Afternoon — go through all client chats and complete the first round of client check-ins.",
+          "Write down again where Dr. Marish is required. Before the standup, ping Adit to check where he is actually required, so at the standup Dr. Marish only goes through what Adit approved.",
+          "After the standup — Dr. Marish gives any pointers Shreeman needs to look into. Shreeman acts on them.",
+        ],
+      },
+      {
+        kind: "p",
+        text: "If a client needs a call with Dr. Marish, Shreeman coordinates it and raises it during the standup itself.",
+      },
+      {
+        kind: "pending",
+        text: "Client resources — the resources page is still being built. It will live in the resources corner of Shreeman's section on Today.",
+      },
+    ],
+  },
+  {
     id: "shape-of-day",
     title: "The shape of the day",
     blurb: "Two shifts, and what belongs in each hour of them.",
@@ -1102,7 +1242,10 @@ export const PLAYBOOKS: Playbook[] = [
 
 /* -------------------------------- scoring --------------------------------- */
 
-export const ALL_TASKS: Task[] = SECTIONS.flatMap((s) => s.tasks);
+/** Adit's rows only — owned sections are scored and reported separately. */
+export const ALL_TASKS: Task[] = SECTIONS.filter((s) => !s.owner).flatMap(
+  (s) => s.tasks
+);
 export const TOTAL_TASKS = ALL_TASKS.length;
 
 export const STANDING_NOTE =
@@ -1171,11 +1314,17 @@ export function grade(ticks: Ticks, coverage?: Coverage): Grade {
   return percent(ticks, coverage) >= 75 ? "A+" : "C-";
 }
 
-/** Human-readable list of what is still open, for the nightly report. */
-export function outstanding(ticks: Ticks, coverage?: Coverage): string[] {
+/** Human-readable list of what is still open, for the nightly report.
+ *  Adit's sections by default; pass `owner` for someone else's. */
+export function outstanding(
+  ticks: Ticks,
+  coverage?: Coverage,
+  owner?: string
+): string[] {
   const skipped = SKIPPED_TASK_IDS(ticks);
   const open: string[] = [];
   for (const section of SECTIONS) {
+    if (section.owner !== owner) continue;
     for (const task of section.tasks) {
       if (skipped.has(task.id) || isTaskDone(task, ticks, coverage)) continue;
       if (task.coverage) {

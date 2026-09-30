@@ -476,6 +476,14 @@ export default function Page() {
       stillOpen.length
         ? `Outstanding:\n${stillOpen.map((o) => `  · ${o}`).join("\n")}`
         : "Outstanding: nothing — full sweep.",
+      ...SECTIONS.filter((s) => s.owner).map((s) => {
+        const open = outstanding(ticks, coverage, s.owner);
+        return `${s.owner}: ${s.tasks.length - open.length}/${s.tasks.length}${
+          open.length
+            ? `\n${open.map((o) => `  · ${o.replace(`${s.title} · `, "")}`).join("\n")}`
+            : " — all done."
+        }`;
+      }),
       `Notes: ${notes.trim() || "—"}`,
       "",
       "— Adit",
@@ -795,6 +803,12 @@ export default function Page() {
                   )}
                 </div>
               ))}
+              {section.corner && (
+                <div className="manual-entry">
+                  <h3>{section.corner.title}</h3>
+                  <Sop blocks={section.corner.blocks} />
+                </div>
+              )}
             </section>
           ))}
         </div>
@@ -1007,6 +1021,12 @@ export default function Page() {
                     </div>
 
                     {section.tasks.map((task) => renderTask(task, section))}
+                    {section.corner && (
+                      <div className="manual-entry">
+                        <h3>{section.corner.title}</h3>
+                        <Sop blocks={section.corner.blocks} />
+                      </div>
+                    )}
                   </section>
                 );
               })
