@@ -3,7 +3,7 @@
 // One document per day: `adit:checkin:YYYY-MM-DD`. The roster supplies who
 // exists; this supplies what happened. Adit ticks, Dr. Marish sees the same day.
 
-import { MONTHS, type Student } from "./roster";
+import { MONTHS, PHASE_LABELS, currentPhase, type Student } from "./roster";
 
 export type Entry = {
   /** Checked — an update was taken. */
@@ -36,28 +36,32 @@ export function cleanEntries(raw: unknown): Entries {
 }
 
 /* -------------------------------- ordering -------------------------------- */
-// Active first, then Paused, then Left, then anyone who has a check-in today but
+// Active first (by phase), then Paused, then Left, then anyone who has a check-in today but
 // has since come off the roster. Losing a note because a row was deleted would
 // be worse than showing a tidy list.
 
 export type Row = Student & { archived?: boolean };
 
-/** Section order: Active → Completed → Paused → Left → Archived.
- *  Inside a section, newest join month first. */
+/** Section order: Active students by phase priority (Phase 3 exam/NBME, then
+ *  Phase 1 new, then Phase 2 maintenance) → Completed → Paused → Left →
+ *  Archived. Inside a section, newest join month first. */
 export function rankOf(s: Row): number {
-  if (s.archived) return 5;
-  if (s.status === "Left") return 4;
-  if (s.status === "Paused") return 3;
-  if (s.status === "Completed") return 2;
-  return 1;
+  if (s.archived) return 7;
+  if (s.status === "Left") return 6;
+  if (s.status === "Paused") return 5;
+  if (s.status === "Completed") return 4;
+  const p = currentPhase(s);
+  return p === 3 ? 1 : p === 1 ? 2 : 3;
 }
 
 export const BANDS: Record<number, { cls: string; label: string }> = {
-  1: { cls: "active", label: "Active" },
-  2: { cls: "completed", label: "Completed" },
-  3: { cls: "paused", label: "Paused" },
-  4: { cls: "left", label: "Left" },
-  5: { cls: "archived", label: "Archived — no longer on the tracker" },
+  1: { cls: "phase-3", label: `Phase 3 · ${PHASE_LABELS[3]} — highest priority` },
+  2: { cls: "phase-1", label: `Phase 1 · ${PHASE_LABELS[1]} — high priority` },
+  3: { cls: "phase-2", label: `Phase 2 · ${PHASE_LABELS[2]}` },
+  4: { cls: "completed", label: "Completed" },
+  5: { cls: "paused", label: "Paused" },
+  6: { cls: "left", label: "Left" },
+  7: { cls: "archived", label: "Archived — no longer on the tracker" },
 };
 
 /** Roster rows plus any orphaned entries from this day, in display order. */
@@ -70,6 +74,8 @@ export function buildRows(students: Student[], entries: Entries): Row[] {
       name: entries[id].n ? "(removed student)" : "(removed student)",
       month: "",
       status: "Left" as const,
+      phase: 2 as const,
+      phaseSince: "",
       currency: "USD" as const,
       total: 0,
       installments: [],

@@ -30,6 +30,46 @@ export const MONTHS = [
   "December",
 ] as const;
 
+/* --------------------------------- phases --------------------------------- */
+// Where a student is in the programme, and so how hard they need watching.
+//   1 — New student: constant, high-priority attention.
+//   2 — Maintenance.
+//   3 — Exam coming up, sitting NBMEs: the highest priority of all.
+// Phase 1 lasts two weeks, then the student drops to Phase 2 on their own.
+
+export const PHASES = [1, 2, 3] as const;
+export type Phase = (typeof PHASES)[number];
+
+export const PHASE_LABELS: Record<Phase, string> = {
+  1: "New student",
+  2: "Maintenance",
+  3: "Exam / NBME",
+};
+
+/** Priority order, highest first — how the check-in list is stacked. */
+export const PHASE_PRIORITY: Phase[] = [3, 1, 2];
+
+export const PHASE1_DAYS = 14;
+
+function daysSince(iso: string): number {
+  const [y, m, d] = iso.split("-").map(Number);
+  const [ty, tm, td] = today().split("-").map(Number);
+  return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(y, m - 1, d)) / 86_400_000);
+}
+
+/** The phase a student is actually in today. Phase 1 expires into Phase 2
+ *  two weeks after it was set — derived, so nobody has to remember to move them. */
+export function currentPhase(s: Pick<Student, "phase" | "phaseSince">): Phase {
+  if (s.phase === 1 && s.phaseSince && daysSince(s.phaseSince) >= PHASE1_DAYS) return 2;
+  return s.phase;
+}
+
+/** Days left before a Phase 1 student moves to Phase 2, or null if not in Phase 1. */
+export function phase1DaysLeft(s: Pick<Student, "phase" | "phaseSince">): number | null {
+  if (currentPhase(s) !== 1 || !s.phaseSince) return null;
+  return PHASE1_DAYS - daysSince(s.phaseSince);
+}
+
 export const CURRENCIES = ["USD", "INR"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
@@ -50,6 +90,11 @@ export type Student = {
   /** Month they joined. */
   month: string;
   status: Status;
+  /** As last set by hand. Read it through currentPhase(), which applies the
+   *  two-week Phase 1 → Phase 2 move. */
+  phase: Phase;
+  /** YYYY-MM-DD the phase was set. Starts the two-week Phase 1 clock. */
+  phaseSince: string;
   currency: Currency;
   /** The full fee agreed in the contract. */
   total: number;
@@ -113,6 +158,10 @@ export function cleanStudent(raw: unknown, index: number): Student | null {
       ? (r.month as string)
       : MONTHS[new Date().getMonth()],
     status,
+    // Students on the tracker before phases existed are past their first two
+    // weeks, so they start in Maintenance.
+    phase: PHASES.includes(r.phase as Phase) ? (r.phase as Phase) : 2,
+    phaseSince: cleanDate(r.phaseSince),
     currency: CURRENCIES.includes(r.currency as Currency)
       ? (r.currency as Currency)
       : "USD",
@@ -139,6 +188,8 @@ export function blankStudent(): Student {
     name: "",
     month: MONTHS[new Date().getMonth()],
     status: "Active",
+    phase: 1,
+    phaseSince: today(),
     currency: "USD",
     total: 0,
     installments: [],

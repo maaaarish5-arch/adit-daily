@@ -2,7 +2,14 @@
 
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MONTHS, type Student } from "@/lib/roster";
+import {
+  MONTHS,
+  PHASE_LABELS,
+  PHASE_PRIORITY,
+  currentPhase,
+  phase1DaysLeft,
+  type Student,
+} from "@/lib/roster";
 import {
   BANDS,
   buildRows,
@@ -28,6 +35,7 @@ export default function CheckinView() {
   const [storeError, setStoreError] = useState<string | null>(null);
 
   const [month, setMonth] = useState("all");
+  const [phase, setPhase] = useState("all");
   const [openOnly, setOpenOnly] = useState(false);
   const [query, setQuery] = useState("");
   const [copied, setCopied] = useState(false);
@@ -140,12 +148,14 @@ export default function CheckinView() {
     const q = query.trim().toLowerCase();
     return (q ? allRows : rows).filter((r) => {
       if (month !== "all" && r.month !== month) return false;
+      if (phase !== "all" && (r.status !== "Active" || String(currentPhase(r)) !== phase))
+        return false;
       if (openOnly && entryFor(entries, r.id).c) return false;
       if (q && !`${r.name} ${entryFor(entries, r.id).n}`.toLowerCase().includes(q))
         return false;
       return true;
     });
-  }, [allRows, rows, entries, month, openOnly, query]);
+  }, [allRows, rows, entries, month, phase, openOnly, query]);
 
   const taken = takenCount(rows, entries);
   const total = rows.length;
@@ -163,12 +173,12 @@ export default function CheckinView() {
       ...(done.length
         ? done.map((r) => {
             const n = entryFor(entries, r.id).n.trim();
-            return `  · ${r.name}${n ? ` — ${n}` : ""}`;
+            return `  · ${r.name} (P${currentPhase(r)})${n ? ` — ${n}` : ""}`;
           })
         : ["  —"]),
       "",
       "Not yet reached:",
-      ...(missed.length ? missed.map((r) => `  · ${r.name}`) : ["  — nobody"]),
+      ...(missed.length ? missed.map((r) => `  · ${r.name} (P${currentPhase(r)})`) : ["  — nobody"]),
     ].join("\n");
     try {
       await navigator.clipboard.writeText(text);
@@ -267,6 +277,20 @@ export default function CheckinView() {
             <option key={m}>{m}</option>
           ))}
         </select>
+        <select
+          className="pay-filter"
+          data-on={String(phase !== "all")}
+          value={phase}
+          onChange={(e) => setPhase(e.target.value)}
+          aria-label="Filter by phase"
+        >
+          <option value="all">All phases</option>
+          {PHASE_PRIORITY.map((p) => (
+            <option key={p} value={String(p)}>
+              Phase {p} · {PHASE_LABELS[p]}
+            </option>
+          ))}
+        </select>
         <button
           className="btn ghost"
           data-on={String(openOnly)}
@@ -290,7 +314,7 @@ export default function CheckinView() {
         <p className="empty">
           {openOnly
             ? "Everyone has been reached. That's the whole roster done."
-            : "No one matches that — on any status. Clear the search or switch months."}
+            : "No one matches that — on any status. Clear the search or switch months or phases."}
         </p>
       ) : (
         visible.map((r: Row) => {
@@ -330,6 +354,16 @@ export default function CheckinView() {
                 <div className="who">
                   <div className="nm">{r.name}</div>
                   <div className="meta">
+                    {r.status === "Active" && !r.archived && (() => {
+                      const p = currentPhase(r);
+                      const left = phase1DaysLeft(r);
+                      return (
+                        <span className="phase-tag" data-phase={p}>
+                          Phase {p} · {PHASE_LABELS[p]}
+                          {left !== null && ` · ${left}d left`}
+                        </span>
+                      );
+                    })()}
                     {r.month}
                     {r.archived ? (
                       <span className="archived"> · no longer on the tracker</span>

@@ -6,18 +6,24 @@ import {
   CURRENCIES,
   MONTHS,
   PAYMENTS,
+  PHASES,
+  PHASE_LABELS,
+  PHASE_PRIORITY,
   STATUSES,
   blankInstallment,
   blankStudent,
+  currentPhase,
   dueOn,
   longDay,
   money,
   outstandingLabel,
+  phase1DaysLeft,
   summarise,
   today,
   totals,
   type Currency,
   type Installment,
+  type Phase,
   type Status,
   type Student,
 } from "@/lib/roster";
@@ -35,6 +41,7 @@ export default function RosterView() {
 
   const [monthFilter, setMonthFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [phaseFilter, setPhaseFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [query, setQuery] = useState("");
   const [openPay, setOpenPay] = useState<string | null>(null);
@@ -215,6 +222,7 @@ export default function RosterView() {
     return students.filter((s) => {
       if (monthFilter !== "all" && s.month !== monthFilter) return false;
       if (statusFilter !== "all" && s.status !== statusFilter) return false;
+      if (phaseFilter !== "all" && String(currentPhase(s)) !== phaseFilter) return false;
       const pay = summarise(s).status;
       if (paymentFilter === "owing") {
         // Everyone who still owes anything, whatever the label says.
@@ -225,7 +233,7 @@ export default function RosterView() {
       if (q && !`${s.name} ${s.notes}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [students, monthFilter, statusFilter, paymentFilter, query]);
+  }, [students, monthFilter, statusFilter, phaseFilter, paymentFilter, query]);
 
   const all = totals(students);
   const due = useMemo(
@@ -397,6 +405,20 @@ export default function RosterView() {
         </select>
         <select
           className="pay-filter"
+          data-on={String(phaseFilter !== "all")}
+          value={phaseFilter}
+          onChange={(e) => setPhaseFilter(e.target.value)}
+          aria-label="Filter by phase"
+        >
+          <option value="all">All phases</option>
+          {PHASE_PRIORITY.map((p) => (
+            <option key={p} value={String(p)}>
+              Phase {p} · {PHASE_LABELS[p]}
+            </option>
+          ))}
+        </select>
+        <select
+          className="pay-filter"
           data-on={String(paymentFilter !== "all")}
           value={paymentFilter}
           onChange={(e) => setPaymentFilter(e.target.value)}
@@ -431,6 +453,7 @@ export default function RosterView() {
             <span>Status</span>
             <span>Payment</span>
             <span>Remaining</span>
+            <span>Phase</span>
             <span>Notes</span>
             <span />
           </div>
@@ -492,6 +515,41 @@ export default function RosterView() {
               >
                 {money(sum.remaining, s.currency)}
               </button>
+
+              {(() => {
+                const phase = currentPhase(s);
+                const left = phase1DaysLeft(s);
+                return (
+                  <div
+                    className="cell phase-toggle"
+                    role="radiogroup"
+                    aria-label={`Phase for ${s.name || "student"}`}
+                    title={
+                      left !== null
+                        ? `Phase 1 · ${PHASE_LABELS[1]} — moves to Phase 2 in ${left} day${left === 1 ? "" : "s"}`
+                        : `Phase ${phase} · ${PHASE_LABELS[phase]}`
+                    }
+                  >
+                    {PHASES.map((p: Phase) => (
+                      <button
+                        key={p}
+                        role="radio"
+                        aria-checked={phase === p}
+                        data-phase={p}
+                        data-on={String(phase === p)}
+                        onClick={() =>
+                          phase !== p &&
+                          // Setting Phase 1 restarts its two-week clock from today.
+                          update(s.id, { phase: p, phaseSince: today() })
+                        }
+                      >
+                        P{p}
+                      </button>
+                    ))}
+                    {left !== null && <i className="phase-left">{left}d</i>}
+                  </div>
+                );
+              })()}
 
               <input
                 className="cell notes"
@@ -698,6 +756,7 @@ export default function RosterView() {
                 onClick={() => {
                   setMonthFilter("all");
                   setStatusFilter("all");
+                  setPhaseFilter("all");
                   setPaymentFilter("all");
                   setQuery("");
                 }}
