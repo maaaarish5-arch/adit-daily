@@ -343,6 +343,74 @@ export const SECTIONS: Section[] = [
           },
         ],
       },
+      {
+        id: "new-students",
+        label: "Every student who joined in the last two weeks given special attention",
+        detail:
+          "Anyone onboarded in the past 14 days, any day of it. Check the enrolment tracker if you're unsure who's in the window.",
+        sop: [
+          {
+            kind: "p",
+            text: "The first two weeks decide the whole engagement. A student who feels looked after in that window stays looked after for the rest of it; a student who feels dropped in that window never quite comes back. So new joiners are not treated like everyone else — they get more of you, deliberately, until the fortnight is up.",
+          },
+          {
+            kind: "p",
+            text: "Work out who is in the window before you start. Anyone onboarded on any day in the past fourteen days qualifies — not just this week's intake.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Pump them up. Every exchange should leave them more confident than it found them. Name what they've actually done — the block they finished, the score that moved — not generic encouragement.",
+              "Keep Dr. Marish accountable in those chats. If he's been tagged and hasn't answered, chase him. That is your job, not an overstep.",
+              "Make sure Dr. Marish has got back to every new student within 24 hours. Check each new joiner's group daily. If his last reply is more than a day old, go to him directly and tell him which student is waiting.",
+            ],
+          },
+          {
+            kind: "warn",
+            text: "The 24-hour rule is on Dr. Marish, and keeping it is on you. A new student sitting two days on an unanswered message is the single fastest way to lose them — flag it the moment the clock runs out, every time, even if you've already flagged it yesterday.",
+          },
+        ],
+      },
+      {
+        id: "payments",
+        label: "Check payments — who is due, pending, overdue",
+        detail:
+          'Work it off the Students tab, filtered. "Nothing due today" is still a report.',
+        sop: [
+          {
+            kind: "p",
+            text: "This used to mean reading every contract, every day. It doesn't any more. The tracker holds the payment state, so you filter down to the people it applies to and work only them.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Open the Students tab and set the payment filter to 'Owing — anyone not paid'. That is your working list for the day. The line under the table tells you how much is outstanding across it.",
+              "Narrow further when you want a specific job: 'Partial' for people mid-instalment, 'Overdue' for the ones whose date has already gone, 'Pending' for money not yet started.",
+              "For each student on that list, put the real number in the Remaining column and the specifics in Notes — the exact amount due and the exact deadline, in that order. 'Next instalment $1,200 due 4 Sept' is a note. '$1200' is not.",
+              "Where you don't yet know the figure, open that student's contract once, read the schedule, and write it into Notes. You do that once per student, not once per day.",
+              "DM anyone whose date is close or gone. Personally, one to one — never in the group.",
+              "Update the row the same day they reply. A tracker that lags a day is a tracker nobody trusts.",
+            ],
+          },
+          {
+            kind: "p",
+            text: "Moving someone to Paid clears their Remaining automatically, so a paid student can never sit there still showing a balance.",
+          },
+          {
+            kind: "script",
+            title: "Payment DM — draft, pending Dr. Marish's approval",
+            body: PAYMENT_DM,
+          },
+          {
+            kind: "p",
+            text: "Precise and polite. Name the exact instalment and the exact date — no vague 'just checking on payment'. Ask them to confirm the status and confirm the contract schedule still works. Curious, never accusing.",
+          },
+          {
+            kind: "warn",
+            text: "Anything overdue, disputed, or where the student pushes back on the contract terms goes to Dr. Marish the same day. Don't negotiate dates yourself.",
+          },
+        ],
+      },
     ],
     corner: {
       title: "Client resources",
@@ -493,74 +561,6 @@ export const SECTIONS: Section[] = [
           {
             kind: "warn",
             text: "Never invent a plan or improvise a schedule to fill the gap. Tag Dr. Marish and wait.",
-          },
-        ],
-      },
-      {
-        id: "new-students",
-        label: "Every student who joined in the last two weeks given special attention",
-        detail:
-          "Anyone onboarded in the past 14 days, any day of it. Check the enrolment tracker if you're unsure who's in the window.",
-        sop: [
-          {
-            kind: "p",
-            text: "The first two weeks decide the whole engagement. A student who feels looked after in that window stays looked after for the rest of it; a student who feels dropped in that window never quite comes back. So new joiners are not treated like everyone else — they get more of you, deliberately, until the fortnight is up.",
-          },
-          {
-            kind: "p",
-            text: "Work out who is in the window before you start. Anyone onboarded on any day in the past fourteen days qualifies — not just this week's intake.",
-          },
-          {
-            kind: "steps",
-            items: [
-              "Pump them up. Every exchange should leave them more confident than it found them. Name what they've actually done — the block they finished, the score that moved — not generic encouragement.",
-              "Keep Dr. Marish accountable in those chats. If he's been tagged and hasn't answered, chase him. That is your job, not an overstep.",
-              "Make sure Dr. Marish has got back to every new student within 24 hours. Check each new joiner's group daily. If his last reply is more than a day old, go to him directly and tell him which student is waiting.",
-            ],
-          },
-          {
-            kind: "warn",
-            text: "The 24-hour rule is on Dr. Marish, and keeping it is on you. A new student sitting two days on an unanswered message is the single fastest way to lose them — flag it the moment the clock runs out, every time, even if you've already flagged it yesterday.",
-          },
-        ],
-      },
-      {
-        id: "payments",
-        label: "Check payments — who is due, pending, overdue",
-        detail:
-          'Work it off the Students tab, filtered. "Nothing due today" is still a report.',
-        sop: [
-          {
-            kind: "p",
-            text: "This used to mean reading every contract, every day. It doesn't any more. The tracker holds the payment state, so you filter down to the people it applies to and work only them.",
-          },
-          {
-            kind: "steps",
-            items: [
-              "Open the Students tab and set the payment filter to 'Owing — anyone not paid'. That is your working list for the day. The line under the table tells you how much is outstanding across it.",
-              "Narrow further when you want a specific job: 'Partial' for people mid-instalment, 'Overdue' for the ones whose date has already gone, 'Pending' for money not yet started.",
-              "For each student on that list, put the real number in the Remaining column and the specifics in Notes — the exact amount due and the exact deadline, in that order. 'Next instalment $1,200 due 4 Sept' is a note. '$1200' is not.",
-              "Where you don't yet know the figure, open that student's contract once, read the schedule, and write it into Notes. You do that once per student, not once per day.",
-              "DM anyone whose date is close or gone. Personally, one to one — never in the group.",
-              "Update the row the same day they reply. A tracker that lags a day is a tracker nobody trusts.",
-            ],
-          },
-          {
-            kind: "p",
-            text: "Moving someone to Paid clears their Remaining automatically, so a paid student can never sit there still showing a balance.",
-          },
-          {
-            kind: "script",
-            title: "Payment DM — draft, pending Dr. Marish's approval",
-            body: PAYMENT_DM,
-          },
-          {
-            kind: "p",
-            text: "Precise and polite. Name the exact instalment and the exact date — no vague 'just checking on payment'. Ask them to confirm the status and confirm the contract schedule still works. Curious, never accusing.",
-          },
-          {
-            kind: "warn",
-            text: "Anything overdue, disputed, or where the student pushes back on the contract terms goes to Dr. Marish the same day. Don't negotiate dates yourself.",
           },
         ],
       },
@@ -1047,6 +1047,10 @@ export const PLAYBOOKS: Playbook[] = [
       {
         kind: "p",
         text: "Feedback is Shreeman's too: every piece of feedback read and passed on, and Vault appreciation from WhatsApp added to the highlights the same day. The procedure for both is on those rows in his section.",
+      },
+      {
+        kind: "p",
+        text: "So are new joiners and payments: every student who joined in the last two weeks given special attention, and the daily payment check — who is due, pending, overdue. Both procedures are on those rows in his section.",
       },
       {
         kind: "pending",
