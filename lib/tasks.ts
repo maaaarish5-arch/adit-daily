@@ -289,6 +289,60 @@ export const SECTIONS: Section[] = [
           },
         ],
       },
+      {
+        id: "feedback-check",
+        label: "Every piece of feedback read and passed on",
+        sop: [
+          {
+            kind: "p",
+            text: "Two places. Feedback that arrives through any of the DMs, and the feedback section inside the Vault admin panel.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Log into the admin panel and open the feedback section.",
+              "Read all of it — not just the new-looking ones.",
+              "Send Dr. Marish everything that needs him, with your own one-line read on each.",
+            ],
+          },
+          { kind: "link", label: "Admin panel", href: ADMIN },
+          {
+            kind: "creds",
+            label: "Admin login",
+            user: "official.p2a.consultancy@gmail.com",
+            pass: "Mulimuli",
+          },
+        ],
+      },
+      {
+        id: "feedback-highlights",
+        label: "Vault appreciation from WhatsApp added to the highlights",
+        detail:
+          "Any student praising the Vault — capture it the day you see it, not later.",
+        sop: [
+          {
+            kind: "p",
+            text: "Praise turns up in the middle of an ordinary conversation and is buried by the next scroll. The moment a student says the Vault worked for them — a score that jumped, a concept that finally landed, a plain thank-you — it goes into the highlights. This is not a weekly sweep. Same day, every time.",
+          },
+          {
+            kind: "steps",
+            items: [
+              "Screenshot the message with the student's name and the date visible.",
+              "Crop out anything private that isn't the point — payment talk, personal circumstances — unless the praise itself is about the score.",
+              "Add it to the highlights with one line of context: who, which exam, and what they were reacting to.",
+              "Anything exceptional goes to Dr. Marish the same day. Those are the ones that become posts.",
+            ],
+          },
+          {
+            kind: "warn",
+            text: "Capturing is yours. Publishing is his. A student's words or name never leave the highlights without Dr. Marish clearing it first.",
+          },
+          {
+            kind: "pending",
+            text: "Dr. Marish is confirming where the highlights live, and whether it's the same source the Instagram story highlights are built from.",
+          },
+        ],
+      },
     ],
     corner: {
       title: "Client resources",
@@ -835,67 +889,6 @@ export const SECTIONS: Section[] = [
   },
 
   {
-    id: "feedback",
-    title: "Feedback",
-    tasks: [
-      {
-        id: "feedback-check",
-        label: "Every piece of feedback read and passed on",
-        sop: [
-          {
-            kind: "p",
-            text: "Two places. Feedback that arrives through any of the DMs, and the feedback section inside the Vault admin panel.",
-          },
-          {
-            kind: "steps",
-            items: [
-              "Log into the admin panel and open the feedback section.",
-              "Read all of it — not just the new-looking ones.",
-              "Send Dr. Marish everything that needs him, with your own one-line read on each.",
-            ],
-          },
-          { kind: "link", label: "Admin panel", href: ADMIN },
-          {
-            kind: "creds",
-            label: "Admin login",
-            user: "official.p2a.consultancy@gmail.com",
-            pass: "Mulimuli",
-          },
-        ],
-      },
-      {
-        id: "feedback-highlights",
-        label: "Vault appreciation from WhatsApp added to the highlights",
-        detail:
-          "Any student praising the Vault — capture it the day you see it, not later.",
-        sop: [
-          {
-            kind: "p",
-            text: "Praise turns up in the middle of an ordinary conversation and is buried by the next scroll. The moment a student says the Vault worked for them — a score that jumped, a concept that finally landed, a plain thank-you — it goes into the highlights. This is not a weekly sweep. Same day, every time.",
-          },
-          {
-            kind: "steps",
-            items: [
-              "Screenshot the message with the student's name and the date visible.",
-              "Crop out anything private that isn't the point — payment talk, personal circumstances — unless the praise itself is about the score.",
-              "Add it to the highlights with one line of context: who, which exam, and what they were reacting to.",
-              "Anything exceptional goes to Dr. Marish the same day. Those are the ones that become posts.",
-            ],
-          },
-          {
-            kind: "warn",
-            text: "Capturing is yours. Publishing is his. A student's words or name never leave the highlights without Dr. Marish clearing it first.",
-          },
-          {
-            kind: "pending",
-            text: "Dr. Marish is confirming where the highlights live, and whether it's the same source the Instagram story highlights are built from.",
-          },
-        ],
-      },
-    ],
-  },
-
-  {
     id: "meetings",
     title: "Meetings",
     tasks: [
@@ -1050,6 +1043,10 @@ export const PLAYBOOKS: Playbook[] = [
       {
         kind: "p",
         text: "If a client needs a call with Dr. Marish, Shreeman coordinates it and raises it during the standup itself.",
+      },
+      {
+        kind: "p",
+        text: "Feedback is Shreeman's too: every piece of feedback read and passed on, and Vault appreciation from WhatsApp added to the highlights the same day. The procedure for both is on those rows in his section.",
       },
       {
         kind: "pending",
