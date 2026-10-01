@@ -1754,6 +1754,22 @@ select.cell {
   border-color: var(--signal-deep);
 }
 
+.checkin-row .phase-edit {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 0.5rem;
+}
+.checkin-row .phase-edit button {
+  flex: none;
+  padding: 0.1rem 0.4rem;
+  font-size: 0.55rem;
+}
+.checkin-row .phase-name {
+  font-style: normal;
+  margin-left: 0.3rem;
+  color: var(--bone-dim);
+}
+
 .btn.ghost[data-on="true"] {
   color: var(--signal);
   border-color: var(--signal-deep);

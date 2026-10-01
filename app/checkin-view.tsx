@@ -4,10 +4,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   MONTHS,
+  PHASES,
   PHASE_LABELS,
   PHASE_PRIORITY,
   currentPhase,
   phase1DaysLeft,
+  today,
+  type Phase,
   type Student,
 } from "@/lib/roster";
 import {
@@ -135,6 +138,38 @@ export default function CheckinView() {
     },
     [date, save]
   );
+
+  // Phase lives on the roster, not the day. Re-read the roster first and
+  // change only this one student, so a stale copy here never overwrites an
+  // edit made on the Students tab in the meantime.
+  const changePhase = useCallback(async (id: string, p: Phase) => {
+    const patchOne = (list: Student[]) =>
+      list.map((s) =>
+        // Setting Phase 1 restarts its two-week clock from today.
+        s.id === id ? { ...s, phase: p, phaseSince: today() } : s
+      );
+    setStudents(patchOne);
+    setSync("saving");
+    try {
+      const fresh = await fetch("/api/roster", { cache: "no-store" }).then((r) => r.json());
+      if (!Array.isArray(fresh.students)) throw new Error("roster unavailable");
+      const next = patchOne(fresh.students);
+      const r = await fetch("/api/roster", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-passcode": localStorage.getItem(PASSCODE_KEY) ?? "",
+        },
+        body: JSON.stringify({ students: next }),
+      });
+      if (!r.ok) throw new Error("save failed");
+      setStudents(next);
+      setSync("saved");
+    } catch {
+      setSync("error");
+      loadRoster();
+    }
+  }, [loadRoster]);
 
   /* -------------------------------- derived -------------------------------- */
 
@@ -358,9 +393,28 @@ export default function CheckinView() {
                       const p = currentPhase(r);
                       const left = phase1DaysLeft(r);
                       return (
-                        <span className="phase-tag" data-phase={p}>
-                          Phase {p} · {PHASE_LABELS[p]}
-                          {left !== null && ` · ${left}d left`}
+                        <span
+                          className="phase-toggle phase-edit"
+                          role="radiogroup"
+                          aria-label={`Phase for ${r.name}`}
+                          title={`Phase ${p} · ${PHASE_LABELS[p]}${left !== null ? ` — moves to Phase 2 in ${left}d` : ""}`}
+                        >
+                          {PHASES.map((x) => (
+                            <button
+                              key={x}
+                              role="radio"
+                              aria-checked={p === x}
+                              data-phase={x}
+                              data-on={String(p === x)}
+                              onClick={() => p !== x && changePhase(r.id, x)}
+                            >
+                              P{x}
+                            </button>
+                          ))}
+                          <i className="phase-name">
+                            {PHASE_LABELS[p]}
+                            {left !== null && ` · ${left}d left`}
+                          </i>
                         </span>
                       );
                     })()}
