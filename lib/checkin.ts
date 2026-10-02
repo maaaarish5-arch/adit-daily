@@ -3,7 +3,7 @@
 // One document per day: `adit:checkin:YYYY-MM-DD`. The roster supplies who
 // exists; this supplies what happened. Adit ticks, Dr. Marish sees the same day.
 
-import { MONTHS, PHASE_LABELS, currentPhase, type Student } from "./roster";
+import { MONTHS, PHASE_LABELS, PHASE_PRIORITY, currentPhase, type Student } from "./roster";
 
 export type Entry = {
   /** Checked — an update was taken. */
@@ -43,25 +43,25 @@ export function cleanEntries(raw: unknown): Entries {
 export type Row = Student & { archived?: boolean };
 
 /** Section order: Active students by phase priority (Phase 3 exam/NBME, then
- *  Phase 1 new, then Phase 2 maintenance) → Completed → Paused → Left →
- *  Archived. Inside a section, newest join month first. */
+ *  Phase 1 new, then Phase 2 maintenance, then E/M) → Completed → Paused →
+ *  Left → Archived. Inside a section, newest join month first. */
 export function rankOf(s: Row): number {
-  if (s.archived) return 7;
-  if (s.status === "Left") return 6;
-  if (s.status === "Paused") return 5;
-  if (s.status === "Completed") return 4;
-  const p = currentPhase(s);
-  return p === 3 ? 1 : p === 1 ? 2 : 3;
+  if (s.archived) return 8;
+  if (s.status === "Left") return 7;
+  if (s.status === "Paused") return 6;
+  if (s.status === "Completed") return 5;
+  return PHASE_PRIORITY.indexOf(currentPhase(s)) + 1;
 }
 
 export const BANDS: Record<number, { cls: string; label: string }> = {
   1: { cls: "phase-3", label: `Phase 3 · ${PHASE_LABELS[3]} — highest priority` },
   2: { cls: "phase-1", label: `Phase 1 · ${PHASE_LABELS[1]} — high priority` },
   3: { cls: "phase-2", label: `Phase 2 · ${PHASE_LABELS[2]}` },
-  4: { cls: "completed", label: "Completed" },
-  5: { cls: "paused", label: "Paused" },
-  6: { cls: "left", label: "Left" },
-  7: { cls: "archived", label: "Archived — no longer on the tracker" },
+  4: { cls: "phase-4", label: PHASE_LABELS[4] },
+  5: { cls: "completed", label: "Completed" },
+  6: { cls: "paused", label: "Paused" },
+  7: { cls: "left", label: "Left" },
+  8: { cls: "archived", label: "Archived — no longer on the tracker" },
 };
 
 /** Roster rows plus any orphaned entries from this day, in display order. */

@@ -7,8 +7,10 @@ import {
   PHASES,
   PHASE_LABELS,
   PHASE_PRIORITY,
+  PHASE_TAGS,
   currentPhase,
   phase1DaysLeft,
+  phaseName,
   today,
   type Phase,
   type Student,
@@ -208,12 +210,12 @@ export default function CheckinView() {
       ...(done.length
         ? done.map((r) => {
             const n = entryFor(entries, r.id).n.trim();
-            return `  · ${r.name} (P${currentPhase(r)})${n ? ` — ${n}` : ""}`;
+            return `  · ${r.name} (${PHASE_TAGS[currentPhase(r)]})${n ? ` — ${n}` : ""}`;
           })
         : ["  —"]),
       "",
       "Not yet reached:",
-      ...(missed.length ? missed.map((r) => `  · ${r.name} (P${currentPhase(r)})`) : ["  — nobody"]),
+      ...(missed.length ? missed.map((r) => `  · ${r.name} (${PHASE_TAGS[currentPhase(r)]})`) : ["  — nobody"]),
     ].join("\n");
     try {
       await navigator.clipboard.writeText(text);
@@ -322,7 +324,7 @@ export default function CheckinView() {
           <option value="all">All phases</option>
           {PHASE_PRIORITY.map((p) => (
             <option key={p} value={String(p)}>
-              Phase {p} · {PHASE_LABELS[p]}
+              {phaseName(p)}
             </option>
           ))}
         </select>
@@ -397,7 +399,7 @@ export default function CheckinView() {
                           className="phase-toggle phase-edit"
                           role="radiogroup"
                           aria-label={`Phase for ${r.name}`}
-                          title={`Phase ${p} · ${PHASE_LABELS[p]}${left !== null ? ` — moves to Phase 2 in ${left}d` : ""}`}
+                          title={`${phaseName(p)}${left !== null ? ` — moves to Phase 2 in ${left}d` : ""}`}
                         >
                           {PHASES.map((x) => (
                             <button
@@ -408,13 +410,15 @@ export default function CheckinView() {
                               data-on={String(p === x)}
                               onClick={() => p !== x && changePhase(r.id, x)}
                             >
-                              P{x}
+                              {PHASE_TAGS[x]}
                             </button>
                           ))}
-                          <i className="phase-name">
-                            {PHASE_LABELS[p]}
-                            {left !== null && ` · ${left}d left`}
-                          </i>
+                          {PHASE_LABELS[p] !== PHASE_TAGS[p] && (
+                            <i className="phase-name">
+                              {PHASE_LABELS[p]}
+                              {left !== null && ` · ${left}d left`}
+                            </i>
+                          )}
                         </span>
                       );
                     })()}

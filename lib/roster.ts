@@ -35,19 +35,34 @@ export const MONTHS = [
 //   1 — New student: constant, high-priority attention.
 //   2 — Maintenance.
 //   3 — Exam coming up, sitting NBMEs: the highest priority of all.
+//   4 — E/M. Stored as 4 but always shown as "E/M", never "Phase 4".
 // Phase 1 lasts two weeks, then the student drops to Phase 2 on their own.
 
-export const PHASES = [1, 2, 3] as const;
+export const PHASES = [1, 2, 3, 4] as const;
 export type Phase = (typeof PHASES)[number];
 
 export const PHASE_LABELS: Record<Phase, string> = {
   1: "New student",
   2: "Maintenance",
   3: "Exam / NBME",
+  4: "E/M",
 };
 
+/** The short tag on the toggle buttons: P1, P2, P3, E/M. */
+export const PHASE_TAGS: Record<Phase, string> = {
+  1: "P1",
+  2: "P2",
+  3: "P3",
+  4: "E/M",
+};
+
+/** Full name for filters and tooltips: "Phase 1 · New student", or just "E/M". */
+export function phaseName(p: Phase): string {
+  return p === 4 ? PHASE_LABELS[4] : `Phase ${p} · ${PHASE_LABELS[p]}`;
+}
+
 /** Priority order, highest first — how the check-in list is stacked. */
-export const PHASE_PRIORITY: Phase[] = [3, 1, 2];
+export const PHASE_PRIORITY: Phase[] = [3, 1, 2, 4];
 
 export const PHASE1_DAYS = 14;
 

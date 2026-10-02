@@ -9,6 +9,7 @@ import {
   PHASES,
   PHASE_LABELS,
   PHASE_PRIORITY,
+  PHASE_TAGS,
   STATUSES,
   blankInstallment,
   blankStudent,
@@ -18,6 +19,7 @@ import {
   money,
   outstandingLabel,
   phase1DaysLeft,
+  phaseName,
   summarise,
   today,
   totals,
@@ -413,7 +415,7 @@ export default function RosterView() {
           <option value="all">All phases</option>
           {PHASE_PRIORITY.map((p) => (
             <option key={p} value={String(p)}>
-              Phase {p} · {PHASE_LABELS[p]}
+              {phaseName(p)}
             </option>
           ))}
         </select>
@@ -527,7 +529,7 @@ export default function RosterView() {
                     title={
                       left !== null
                         ? `Phase 1 · ${PHASE_LABELS[1]} — moves to Phase 2 in ${left} day${left === 1 ? "" : "s"}`
-                        : `Phase ${phase} · ${PHASE_LABELS[phase]}`
+                        : phaseName(phase)
                     }
                   >
                     {PHASES.map((p: Phase) => (
@@ -543,7 +545,7 @@ export default function RosterView() {
                           update(s.id, { phase: p, phaseSince: today() })
                         }
                       >
-                        P{p}
+                        {PHASE_TAGS[p]}
                       </button>
                     ))}
                     {left !== null && <i className="phase-left">{left}d</i>}

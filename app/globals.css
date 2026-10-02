@@ -1271,7 +1271,7 @@ button {
 .grid-row {
   display: grid;
   grid-template-columns:
-    minmax(9rem, 1.5fr) 7.5rem 7.5rem 7.5rem 6.5rem 8.5rem minmax(10rem, 2fr) 2rem;
+    minmax(9rem, 1.5fr) 7.5rem 7.5rem 7.5rem 6.5rem 10rem minmax(10rem, 2fr) 2rem;
   gap: 0.4rem;
   align-items: center;
 }
@@ -1454,7 +1454,7 @@ select.cell {
   font-weight: 500;
 }
 
-/* phase: 3 = exam / NBME (highest), 1 = new (high), 2 = maintenance */
+/* phase: 3 = exam / NBME (highest), 1 = new (high), 2 = maintenance, 4 = E/M */
 .phase-toggle {
   display: flex;
   align-items: center;
@@ -1495,6 +1495,11 @@ select.cell {
   color: var(--bone);
   background: var(--rust);
   border-color: var(--rust);
+}
+.phase-toggle button[data-on="true"][data-phase="4"] {
+  color: var(--ink);
+  background: var(--bone-dim);
+  border-color: var(--bone-dim);
 }
 
 .phase-left {
@@ -1736,6 +1741,9 @@ select.cell {
 }
 .band.phase-2 {
   color: var(--bone-dim);
+}
+.band.phase-4 {
+  color: var(--bone);
 }
 
 .checkin-row .phase-tag {
