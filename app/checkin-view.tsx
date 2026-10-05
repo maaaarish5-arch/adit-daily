@@ -9,6 +9,7 @@ import {
   PHASE_PRIORITY,
   PHASE_TAGS,
   currentPhase,
+  longDay,
   phase1DaysLeft,
   phaseName,
   today,
@@ -413,12 +414,14 @@ export default function CheckinView() {
                               {PHASE_TAGS[x]}
                             </button>
                           ))}
-                          {PHASE_LABELS[p] !== PHASE_TAGS[p] && (
-                            <i className="phase-name">
-                              {PHASE_LABELS[p]}
-                              {left !== null && ` · ${left}d left`}
-                            </i>
-                          )}
+                          <i className="phase-name">
+                            {p === 4
+                              ? r.examDate
+                                ? `Exam ${longDay(r.examDate)}`
+                                : "Exam date not set"
+                              : PHASE_LABELS[p]}
+                            {left !== null && ` · ${left}d left`}
+                          </i>
                         </span>
                       );
                     })()}

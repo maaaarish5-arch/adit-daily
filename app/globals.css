@@ -1271,7 +1271,7 @@ button {
 .grid-row {
   display: grid;
   grid-template-columns:
-    minmax(9rem, 1.5fr) 7.5rem 7.5rem 7.5rem 6.5rem 10rem minmax(10rem, 2fr) 2rem;
+    minmax(9rem, 1.5fr) 7.5rem 7.5rem 7.5rem 6.5rem 11rem minmax(10rem, 2fr) 2rem;
   gap: 0.4rem;
   align-items: center;
 }
@@ -1454,7 +1454,50 @@ select.cell {
   font-weight: 500;
 }
 
-/* phase: 3 = exam / NBME (highest), 1 = new (high), 2 = maintenance, 4 = E/M */
+/* phase: 3 = NBME (highest), 1 = new (high), 2 = maintenance, 4 = exam date set, 5 = match */
+.phase-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0;
+  border: 0;
+}
+
+.phase-cell:hover {
+  border-color: transparent;
+}
+
+/* the exam date, asked for as soon as a student is put in Phase 4 */
+.exam-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.35rem;
+  border: 1px solid var(--bone-dim);
+  background: var(--ink-sink);
+}
+
+.exam-box > span {
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bone-dim);
+}
+
+/* no date yet: the box stays loud until it is filled in */
+.exam-box[data-set="false"] {
+  border-color: var(--rust);
+}
+
+.exam-box[data-set="false"] > span {
+  color: var(--rust);
+}
+
+.exam-box .dmy select {
+  font-size: 0.66rem;
+  padding: 0.3rem 0.1rem;
+}
+
 .phase-toggle {
   display: flex;
   align-items: center;
@@ -1500,6 +1543,11 @@ select.cell {
   color: var(--ink);
   background: var(--bone-dim);
   border-color: var(--bone-dim);
+}
+.phase-toggle button[data-on="true"][data-phase="5"] {
+  color: var(--signal);
+  background: transparent;
+  border-color: var(--signal);
 }
 
 .phase-left {
@@ -1744,6 +1792,9 @@ select.cell {
 }
 .band.phase-4 {
   color: var(--bone);
+}
+.band.phase-5 {
+  color: var(--signal-deep);
 }
 
 .checkin-row .phase-tag {
