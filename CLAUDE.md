@@ -43,6 +43,13 @@ Then commit and push. **Pushing to `main` deploys the live site automatically**
 — there is no separate deploy step, and there is no staging. Treat a push as
 publishing.
 
+**Previews:** any other branch gets a Vercel preview URL. A preview reads a copy
+of the live data (students, check-ins, days, corners, to-dos) from the live
+site's GET routes and keeps every edit in memory. It never writes to the live
+store (`previewSandbox` in `lib/store.ts`), and a rust banner says so. Use a
+branch + pull request when the person wants to check a change before it goes
+live.
+
 ```bash
 git add -A && git commit -m "describe the change" && git push
 ```

@@ -40,11 +40,93 @@ const REST_URL = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_U
 const REST_TOKEN =
   process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
 
-export const usingRedis = Boolean(REST_URL && REST_TOKEN);
+/** A Vercel preview (any branch other than main). It must never write to the
+ *  live store, but an empty roster is useless for checking a change — so it
+ *  reads a copy of the live data and keeps every edit in memory. See below. */
+export const previewSandbox = process.env.VERCEL_ENV === "preview";
+
+export const usingRedis = Boolean(REST_URL && REST_TOKEN) || previewSandbox;
+
+/* ---------------------------- preview sandbox ----------------------------- */
+// Stands in for Redis on preview deployments. A key is filled the first time
+// it is read, from the live site's own public GET routes; after that, reads and
+// writes stay in this instance's memory. Nothing is ever sent back to the live
+// site, and a cold start simply begins again from a fresh copy.
+
+const LIVE_SITE = "https://adit-daily.vercel.app";
+
+const sandbox: Map<string, unknown> = ((globalThis as { __aditSandbox?: Map<string, unknown> })
+  .__aditSandbox ??= new Map());
+
+/** The live GET route that returns this key's document, if there is one. */
+function liveRouteFor(key: string): string | null {
+  if (key === "adit:roster") return "/api/roster";
+  if (key === "adit:todos") return "/api/todos";
+  let m = /^adit:checkin:(\d{4}-\d{2}-\d{2})$/.exec(key);
+  if (m) return `/api/checkin?date=${m[1]}`;
+  m = /^adit:day:(\d{4}-\d{2}-\d{2})$/.exec(key);
+  if (m) return `/api/day?date=${m[1]}`;
+  m = /^adit:corner:([a-z]+):(\d{4}-\d{2}-\d{2})$/.exec(key);
+  if (m) return `/api/corner?person=${m[1]}&date=${m[2]}`;
+  return null;
+}
+
+async function sandboxGet(key: string): Promise<unknown> {
+  if (!sandbox.has(key)) {
+    const route = liveRouteFor(key);
+    let value: unknown = null;
+    if (route) {
+      try {
+        const res = await fetch(LIVE_SITE + route, { cache: "no-store" });
+        if (res.ok) value = await res.text();
+      } catch {
+        value = null;
+      }
+    }
+    sandbox.set(key, value);
+  }
+  return sandbox.get(key) ?? null;
+}
+
+async function sandboxCommand(command: (string | number)[]): Promise<unknown> {
+  const [op, key, ...rest] = command.map(String);
+  switch (op) {
+    case "GET":
+      return sandboxGet(key);
+    case "MGET":
+      return Promise.all([key, ...rest].map(sandboxGet));
+    case "SET":
+      sandbox.set(key, rest[0]);
+      return "OK";
+    case "RPUSH": {
+      const list = (sandbox.get(key) as string[] | undefined) ?? [];
+      sandbox.set(key, [...list, ...rest]);
+      return list.length + rest.length;
+    }
+    case "LTRIM": {
+      const list = (sandbox.get(key) as string[] | undefined) ?? [];
+      sandbox.set(key, list.slice(Number(rest[0])));
+      return "OK";
+    }
+    case "LRANGE":
+      return (sandbox.get(key) as string[] | undefined) ?? [];
+    case "SADD": {
+      const set = new Set((sandbox.get(key) as string[] | undefined) ?? []);
+      rest.forEach((v) => set.add(v));
+      sandbox.set(key, [...set]);
+      return rest.length;
+    }
+    case "SMEMBERS":
+      return (sandbox.get(key) as string[] | undefined) ?? [];
+    default:
+      throw new Error(`Preview sandbox does not support ${op}`);
+  }
+}
 
 /* ------------------------------ Upstash Redis ----------------------------- */
 
 async function redisCommand(command: (string | number)[]): Promise<unknown> {
+  if (previewSandbox) return sandboxCommand(command);
   const res = await fetch(REST_URL!, {
     method: "POST",
     headers: {
