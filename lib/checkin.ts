@@ -3,7 +3,7 @@
 // One document per day: `adit:checkin:YYYY-MM-DD`. The roster supplies who
 // exists; this supplies what happened. Adit ticks, Dr. Marish sees the same day.
 
-import { MONTHS, PHASE_LABELS, PHASE_PRIORITY, currentPhase, type Student } from "./roster";
+import { MONTHS, PHASE_PRIORITY, currentPhase, phaseName, type Phase, type Student } from "./roster";
 
 export type Entry = {
   /** Checked — an update was taken. */
@@ -42,26 +42,36 @@ export function cleanEntries(raw: unknown): Entries {
 
 export type Row = Student & { archived?: boolean };
 
-/** Section order: Active students by phase priority (Phase 3 exam/NBME, then
- *  Phase 1 new, then Phase 2 maintenance, then E/M) → Completed → Paused →
- *  Left → Archived. Inside a section, newest join month first. */
+/** Section order: Active students by phase priority (Phase 3 NBME, then
+ *  Phase 1 new, then Phase 2 maintenance, then Phase 4 exam date set, then
+ *  Match) → Completed → Paused → Left → Archived. Inside a section, newest
+ *  join month first. */
+const P = PHASE_PRIORITY.length;
+
 export function rankOf(s: Row): number {
-  if (s.archived) return 8;
-  if (s.status === "Left") return 7;
-  if (s.status === "Paused") return 6;
-  if (s.status === "Completed") return 5;
+  if (s.archived) return P + 4;
+  if (s.status === "Left") return P + 3;
+  if (s.status === "Paused") return P + 2;
+  if (s.status === "Completed") return P + 1;
   return PHASE_PRIORITY.indexOf(currentPhase(s)) + 1;
 }
 
+const PRIORITY_NOTE: Partial<Record<Phase, string>> = {
+  3: " — highest priority",
+  1: " — high priority",
+};
+
 export const BANDS: Record<number, { cls: string; label: string }> = {
-  1: { cls: "phase-3", label: `Phase 3 · ${PHASE_LABELS[3]} — highest priority` },
-  2: { cls: "phase-1", label: `Phase 1 · ${PHASE_LABELS[1]} — high priority` },
-  3: { cls: "phase-2", label: `Phase 2 · ${PHASE_LABELS[2]}` },
-  4: { cls: "phase-4", label: PHASE_LABELS[4] },
-  5: { cls: "completed", label: "Completed" },
-  6: { cls: "paused", label: "Paused" },
-  7: { cls: "left", label: "Left" },
-  8: { cls: "archived", label: "Archived — no longer on the tracker" },
+  ...Object.fromEntries(
+    PHASE_PRIORITY.map((p, i) => [
+      i + 1,
+      { cls: `phase-${p}`, label: `${phaseName(p)}${PRIORITY_NOTE[p] ?? ""}` },
+    ])
+  ),
+  [P + 1]: { cls: "completed", label: "Completed" },
+  [P + 2]: { cls: "paused", label: "Paused" },
+  [P + 3]: { cls: "left", label: "Left" },
+  [P + 4]: { cls: "archived", label: "Archived — no longer on the tracker" },
 };
 
 /** Roster rows plus any orphaned entries from this day, in display order. */
@@ -76,6 +86,7 @@ export function buildRows(students: Student[], entries: Entries): Row[] {
       status: "Left" as const,
       phase: 2 as const,
       phaseSince: "",
+      examDate: "",
       currency: "USD" as const,
       total: 0,
       installments: [],

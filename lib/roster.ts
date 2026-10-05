@@ -35,34 +35,38 @@ export const MONTHS = [
 //   1 — New student: constant, high-priority attention.
 //   2 — Maintenance.
 //   3 — Exam coming up, sitting NBMEs: the highest priority of all.
-//   4 — E/M. Stored as 4 but always shown as "E/M", never "Phase 4".
+//   4 — Exam date set. Carries the date itself in `examDate`.
+//   5 — Match. Stored as 5 but always shown as "M", never "Phase 5".
 // Phase 1 lasts two weeks, then the student drops to Phase 2 on their own.
+// Students stored as 4 before 5 Oct 2026 were "E/M"; they now read as Phase 4.
 
-export const PHASES = [1, 2, 3, 4] as const;
+export const PHASES = [1, 2, 3, 4, 5] as const;
 export type Phase = (typeof PHASES)[number];
 
 export const PHASE_LABELS: Record<Phase, string> = {
   1: "New student",
   2: "Maintenance",
-  3: "Exam / NBME",
-  4: "E/M",
+  3: "NBME",
+  4: "Exam date set",
+  5: "Match",
 };
 
-/** The short tag on the toggle buttons: P1, P2, P3, E/M. */
+/** The short tag on the toggle buttons: P1, P2, P3, P4, M. */
 export const PHASE_TAGS: Record<Phase, string> = {
   1: "P1",
   2: "P2",
   3: "P3",
-  4: "E/M",
+  4: "P4",
+  5: "M",
 };
 
-/** Full name for filters and tooltips: "Phase 1 · New student", or just "E/M". */
+/** Full name for filters and tooltips: "Phase 1 · New student", or "Match phase". */
 export function phaseName(p: Phase): string {
-  return p === 4 ? PHASE_LABELS[4] : `Phase ${p} · ${PHASE_LABELS[p]}`;
+  return p === 5 ? `${PHASE_LABELS[5]} phase` : `Phase ${p} · ${PHASE_LABELS[p]}`;
 }
 
 /** Priority order, highest first — how the check-in list is stacked. */
-export const PHASE_PRIORITY: Phase[] = [3, 1, 2, 4];
+export const PHASE_PRIORITY: Phase[] = [3, 1, 2, 4, 5];
 
 export const PHASE1_DAYS = 14;
 
@@ -110,6 +114,9 @@ export type Student = {
   phase: Phase;
   /** YYYY-MM-DD the phase was set. Starts the two-week Phase 1 clock. */
   phaseSince: string;
+  /** YYYY-MM-DD of the exam, entered when the student is moved to Phase 4.
+   *  Kept if they move on, so it is not lost. Empty until set. */
+  examDate: string;
   currency: Currency;
   /** The full fee agreed in the contract. */
   total: number;
@@ -177,6 +184,7 @@ export function cleanStudent(raw: unknown, index: number): Student | null {
     // weeks, so they start in Maintenance.
     phase: PHASES.includes(r.phase as Phase) ? (r.phase as Phase) : 2,
     phaseSince: cleanDate(r.phaseSince),
+    examDate: cleanDate(r.examDate),
     currency: CURRENCIES.includes(r.currency as Currency)
       ? (r.currency as Currency)
       : "USD",
@@ -205,6 +213,7 @@ export function blankStudent(): Student {
     status: "Active",
     phase: 1,
     phaseSince: today(),
+    examDate: "",
     currency: "USD",
     total: 0,
     installments: [],

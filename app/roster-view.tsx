@@ -522,8 +522,9 @@ export default function RosterView() {
                 const phase = currentPhase(s);
                 const left = phase1DaysLeft(s);
                 return (
+                  <div className="cell phase-cell">
                   <div
-                    className="cell phase-toggle"
+                    className="phase-toggle"
                     role="radiogroup"
                     aria-label={`Phase for ${s.name || "student"}`}
                     title={
@@ -549,6 +550,18 @@ export default function RosterView() {
                       </button>
                     ))}
                     {left !== null && <i className="phase-left">{left}d</i>}
+                  </div>
+                  {/* Phase 4 means the exam is booked, so it asks for the date. */}
+                  {phase === 4 && (
+                    <div className="exam-box" data-set={String(Boolean(s.examDate))}>
+                      <span>Exam date</span>
+                      <DateField
+                        value={s.examDate}
+                        onCommit={(v) => update(s.id, { examDate: v })}
+                        ariaLabel={`Exam date for ${s.name || "student"}`}
+                      />
+                    </div>
+                  )}
                   </div>
                 );
               })()}
