@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     const seen = new Set([...Object.keys(docs), ...Object.keys(checkins)]);
     for (const date of seen) {
       const ticks = docs[date]?.ticks ?? {};
-      const cov = coverageOf(roster.students, checkins[date]?.entries ?? {});
+      const cov = coverageOf(roster.students, checkins[date]?.entries ?? {}, date);
       const done = countDone(ticks, cov);
       days[date] = {
         done,

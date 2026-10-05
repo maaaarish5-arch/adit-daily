@@ -89,6 +89,21 @@ export function phase1DaysLeft(s: Pick<Student, "phase" | "phaseSince">): number
   return PHASE1_DAYS - daysSince(s.phaseSince);
 }
 
+/* ---------------------------- do not disturb ----------------------------- */
+// A student can ask not to be messaged for a few days. While they are on DND
+// they owe no update, so Check-in moves them aside and the day's score does not
+// count them. It ends by itself on `dndUntil` — nobody has to switch it off.
+
+/** The lengths offered on Check-in, in days. */
+export const DND_CHOICES = [1, 2, 3, 7] as const;
+
+/** On DND for this day? `dndFrom` is the first quiet day, `dndUntil` the day
+ *  they can be messaged again, so a 2-day DND set on the 5th covers the 5th and
+ *  6th and is over on the 7th. */
+export function onDnd(s: Pick<Student, "dndFrom" | "dndUntil">, day: string): boolean {
+  return Boolean(s.dndUntil) && Boolean(day) && s.dndFrom <= day && day < s.dndUntil;
+}
+
 export const CURRENCIES = ["USD", "INR"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
@@ -117,6 +132,10 @@ export type Student = {
   /** YYYY-MM-DD of the exam, entered when the student is moved to Phase 4.
    *  Kept if they move on, so it is not lost. Empty until set. */
   examDate: string;
+  /** YYYY-MM-DD, first day of a do-not-disturb stretch. Empty when none. */
+  dndFrom: string;
+  /** YYYY-MM-DD the DND is over and they can be messaged again. Empty when none. */
+  dndUntil: string;
   currency: Currency;
   /** The full fee agreed in the contract. */
   total: number;
@@ -185,6 +204,8 @@ export function cleanStudent(raw: unknown, index: number): Student | null {
     phase: PHASES.includes(r.phase as Phase) ? (r.phase as Phase) : 2,
     phaseSince: cleanDate(r.phaseSince),
     examDate: cleanDate(r.examDate),
+    dndFrom: cleanDate(r.dndFrom),
+    dndUntil: cleanDate(r.dndUntil),
     currency: CURRENCIES.includes(r.currency as Currency)
       ? (r.currency as Currency)
       : "USD",
@@ -214,6 +235,8 @@ export function blankStudent(): Student {
     phase: 1,
     phaseSince: today(),
     examDate: "",
+    dndFrom: "",
+    dndUntil: "",
     currency: "USD",
     total: 0,
     installments: [],

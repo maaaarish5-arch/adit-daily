@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  DND_CHOICES,
   MONTHS,
   PHASES,
   PHASE_LABELS,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/roster";
 import {
   BANDS,
+  activeRows,
   buildRows,
   entryFor,
   owedRows,
@@ -45,6 +47,8 @@ export default function CheckinView() {
   const [openOnly, setOpenOnly] = useState(false);
   const [query, setQuery] = useState("");
   const [copied, setCopied] = useState(false);
+  /** The student whose DND length picker is open, if any. */
+  const [dndOpen, setDndOpen] = useState<string | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef(false);
@@ -142,15 +146,12 @@ export default function CheckinView() {
     [date, save]
   );
 
-  // Phase lives on the roster, not the day. Re-read the roster first and
-  // change only this one student, so a stale copy here never overwrites an
+  // Phase and DND live on the roster, not the day. Re-read the roster first
+  // and change only this one student, so a stale copy here never overwrites an
   // edit made on the Students tab in the meantime.
-  const changePhase = useCallback(async (id: string, p: Phase) => {
+  const patchStudent = useCallback(async (id: string, change: Partial<Student>) => {
     const patchOne = (list: Student[]) =>
-      list.map((s) =>
-        // Setting Phase 1 restarts its two-week clock from today.
-        s.id === id ? { ...s, phase: p, phaseSince: today() } : s
-      );
+      list.map((s) => (s.id === id ? { ...s, ...change } : s));
     setStudents(patchOne);
     setSync("saving");
     try {
@@ -174,17 +175,43 @@ export default function CheckinView() {
     }
   }, [loadRoster]);
 
+  // Setting Phase 1 restarts its two-week clock from today.
+  const changePhase = (id: string, p: Phase) =>
+    patchStudent(id, { phase: p, phaseSince: today() });
+
+  // DND starts on the day being viewed and ends by itself after `days` days.
+  const startDnd = (id: string, days: number) => {
+    if (!date) return;
+    setDndOpen(null);
+    patchStudent(id, { dndFrom: date, dndUntil: shiftDays(date, days) });
+  };
+
+  // Ending early keeps the days already spent on DND, so past check-ins still
+  // read right; ending on the first day removes it altogether.
+  const endDnd = (s: Student) => {
+    if (!date) return;
+    patchStudent(
+      s.id,
+      date <= s.dndFrom ? { dndFrom: "", dndUntil: "" } : { dndUntil: date }
+    );
+  };
+
   /* -------------------------------- derived -------------------------------- */
 
-  const allRows = useMemo(() => buildRows(students, entries), [students, entries]);
+  const allRows = useMemo(
+    () => buildRows(students, entries, date ?? ""),
+    [students, entries, date]
+  );
   // The day is about Active students only. Completed, Paused, Left and removed
   // students stay out of the list, the bar and the copy — until their name is
-  // searched, so a status can still be looked up.
+  // searched, so a status can still be looked up. Students on DND stay in the
+  // list, in their own band, but out of the bar and the count.
+  const listed = useMemo(() => activeRows(allRows), [allRows]);
   const rows = useMemo(() => owedRows(allRows), [allRows]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return (q ? allRows : rows).filter((r) => {
+    return (q ? allRows : listed).filter((r) => {
       if (month !== "all" && r.month !== month) return false;
       if (phase !== "all" && (r.status !== "Active" || String(currentPhase(r)) !== phase))
         return false;
@@ -193,7 +220,7 @@ export default function CheckinView() {
         return false;
       return true;
     });
-  }, [allRows, rows, entries, month, phase, openOnly, query]);
+  }, [allRows, listed, entries, month, phase, openOnly, query]);
 
   const taken = takenCount(rows, entries);
   const total = rows.length;
@@ -203,6 +230,7 @@ export default function CheckinView() {
     if (!date) return;
     const done = rows.filter((r) => entryFor(entries, r.id).c);
     const missed = rows.filter((r) => !entryFor(entries, r.id).c);
+    const quiet = listed.filter((r) => r.dnd);
     const text = [
       `Daily check-in — ${longDate(date)}`,
       `Updates taken: ${taken}/${total} (${pct}%)`,
@@ -217,6 +245,13 @@ export default function CheckinView() {
       "",
       "Not yet reached:",
       ...(missed.length ? missed.map((r) => `  · ${r.name} (${PHASE_TAGS[currentPhase(r)]})`) : ["  — nobody"]),
+      ...(quiet.length
+        ? [
+            "",
+            "On DND (no update owed):",
+            ...quiet.map((r) => `  · ${r.name} — back ${longDay(r.dndUntil)}`),
+          ]
+        : []),
     ].join("\n");
     try {
       await navigator.clipboard.writeText(text);
@@ -432,6 +467,31 @@ export default function CheckinView() {
                       <span className="flag"> · {r.status}</span>
                     ) : null}
                   </div>
+                  {r.status === "Active" && !r.archived && (
+                    <div className="dnd" data-on={String(Boolean(r.dnd))}>
+                      {r.dnd ? (
+                        <>
+                          <span className="dnd-tag">DND</span>
+                          <span>Don&rsquo;t message · back {longDay(r.dndUntil)}</span>
+                          <button onClick={() => endDnd(r)}>End DND</button>
+                        </>
+                      ) : dndOpen === r.id ? (
+                        <>
+                          <span>Do not disturb for</span>
+                          {DND_CHOICES.map((n) => (
+                            <button key={n} onClick={() => startDnd(r.id, n)}>
+                              {n} day{n === 1 ? "" : "s"}
+                            </button>
+                          ))}
+                          <button className="dnd-cancel" onClick={() => setDndOpen(null)}>
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={() => setDndOpen(r.id)}>DND</button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <input

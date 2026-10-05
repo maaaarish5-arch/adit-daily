@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     const days: Record<string, { done: number; percent: number }> = {};
     for (const [date, doc] of Object.entries(docs)) {
       const cov = roster
-        ? coverageOf(roster.students, checkins?.[date]?.entries ?? {})
+        ? coverageOf(roster.students, checkins?.[date]?.entries ?? {}, date)
         : undefined;
       const s = cornerScore(corner, doc.ticks, cov);
       days[date] = { done: s.done, percent: s.percent };
