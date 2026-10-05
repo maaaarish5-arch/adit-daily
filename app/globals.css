@@ -1879,6 +1879,38 @@ select.cell {
   border-color: transparent;
 }
 
+.checkin-row .dnd button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* the custom length: type any number of days */
+.checkin-row .dnd .dnd-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.checkin-row .dnd .dnd-days {
+  width: 3.2rem;
+  font: inherit;
+  padding: 0.12rem 0.3rem;
+  background: var(--ink-sink);
+  color: var(--bone);
+  border: 1px solid var(--rule-strong);
+  text-align: center;
+}
+
+.checkin-row .dnd .dnd-days:focus {
+  outline: none;
+  border-color: var(--signal-deep);
+}
+
+.checkin-row .dnd .dnd-back {
+  color: var(--signal);
+}
+
 .band.dnd {
   color: var(--bone-dim);
 }

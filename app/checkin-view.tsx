@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DND_CHOICES,
+  DND_MAX_DAYS,
   MONTHS,
   PHASES,
   PHASE_LABELS,
@@ -49,6 +50,8 @@ export default function CheckinView() {
   const [copied, setCopied] = useState(false);
   /** The student whose DND length picker is open, if any. */
   const [dndOpen, setDndOpen] = useState<string | null>(null);
+  /** What is typed in the picker's custom "__ days" box. */
+  const [dndDays, setDndDays] = useState("");
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef(false);
@@ -183,6 +186,7 @@ export default function CheckinView() {
   const startDnd = (id: string, days: number) => {
     if (!date) return;
     setDndOpen(null);
+    setDndDays("");
     patchStudent(id, { dndFrom: date, dndUntil: shiftDays(date, days) });
   };
 
@@ -483,6 +487,31 @@ export default function CheckinView() {
                               {n} day{n === 1 ? "" : "s"}
                             </button>
                           ))}
+                          {(() => {
+                            const n = Math.floor(Number(dndDays));
+                            const ok = n >= 1 && n <= DND_MAX_DAYS;
+                            return (
+                              <span className="dnd-custom">
+                                <span>or</span>
+                                <input
+                                  className="dnd-days"
+                                  type="number"
+                                  min={1}
+                                  max={DND_MAX_DAYS}
+                                  value={dndDays}
+                                  onChange={(e) => setDndDays(e.target.value)}
+                                  onKeyDown={(e) => e.key === "Enter" && ok && startDnd(r.id, n)}
+                                  placeholder="__"
+                                  aria-label={`Number of DND days for ${r.name}`}
+                                />
+                                <span>days</span>
+                                {ok && <span className="dnd-back">back {longDay(shiftDays(date, n))}</span>}
+                                <button disabled={!ok} onClick={() => startDnd(r.id, n)}>
+                                  Set
+                                </button>
+                              </span>
+                            );
+                          })()}
                           <button className="dnd-cancel" onClick={() => setDndOpen(null)}>
                             Cancel
                           </button>

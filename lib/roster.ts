@@ -97,6 +97,9 @@ export function phase1DaysLeft(s: Pick<Student, "phase" | "phaseSince">): number
 /** The lengths offered on Check-in, in days. */
 export const DND_CHOICES = [1, 2, 3, 7] as const;
 
+/** The longest DND the custom "__ days" box accepts. */
+export const DND_MAX_DAYS = 90;
+
 /** On DND for this day? `dndFrom` is the first quiet day, `dndUntil` the day
  *  they can be messaged again, so a 2-day DND set on the 5th covers the 5th and
  *  6th and is over on the 7th. */
