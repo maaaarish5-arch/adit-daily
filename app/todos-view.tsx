@@ -12,6 +12,7 @@ import {
   type Todo,
 } from "@/lib/todos";
 import { longDay, today } from "@/lib/roster";
+import { PRIORITIES, type Priority } from "@/lib/dump";
 
 type SyncState = "idle" | "saving" | "saved" | "error";
 
@@ -150,9 +151,9 @@ export default function TodosView() {
         <div>
           <h2>To-do</h2>
           <p className="hint">
-            One-off work from the 29 September planning meeting — the ops handover
-            and everything that follows it. Separate from the daily checklist, and
-            deliberately not scored.
+            One-off work — the ops handover, everything from the planning meetings,
+            and every loose task from the old Checklist tab (with its priority).
+            Separate from the daily checklist, and deliberately not scored.
           </p>
         </div>
         <span className="roster-sync">
@@ -279,6 +280,20 @@ export default function TodosView() {
                     >
                       {OWNERS.map((o) => (
                         <option key={o}>{o}</option>
+                      ))}
+                    </select>
+                    <select
+                      className="todo-owner prio-tag"
+                      data-prio={item.p || undefined}
+                      value={item.p}
+                      onChange={(e) => patch(item.id, { p: e.target.value as Priority | "" })}
+                      aria-label="Priority"
+                    >
+                      <option value="">No priority</option>
+                      {PRIORITIES.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.label}
+                        </option>
                       ))}
                     </select>
                     <DateField

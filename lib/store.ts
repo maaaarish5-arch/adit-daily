@@ -342,7 +342,14 @@ export async function getActivity(
 const TODOS_KEY = "adit:todos";
 const TODOS_FILE = path.join(process.cwd(), ".data", "todos.json");
 
-export async function getTodos(): Promise<{ todos: Todo[]; updatedAt: string | null }> {
+export type TodosDoc = {
+  todos: Todo[];
+  updatedAt: string | null;
+  /** Set once the old Checklist tab's tasks have been folded in. */
+  dumpMerged?: boolean;
+};
+
+export async function getTodos(): Promise<TodosDoc> {
   if (usingRedis) return parseTodos(await redisCommand(["GET", TODOS_KEY]));
   assertLocal();
   try {
@@ -352,10 +359,8 @@ export async function getTodos(): Promise<{ todos: Todo[]; updatedAt: string | n
   }
 }
 
-export async function putTodos(
-  todos: Todo[]
-): Promise<{ todos: Todo[]; updatedAt: string | null }> {
-  const saved = { todos, updatedAt: new Date().toISOString() };
+export async function putTodos(todos: Todo[], dumpMerged = false): Promise<TodosDoc> {
+  const saved: TodosDoc = { todos, updatedAt: new Date().toISOString(), dumpMerged };
   if (usingRedis) {
     await redisCommand(["SET", TODOS_KEY, JSON.stringify(saved)]);
     return saved;
@@ -366,14 +371,83 @@ export async function putTodos(
   return saved;
 }
 
-function parseTodos(raw: unknown): { todos: Todo[]; updatedAt: string | null } {
+function parseTodos(raw: unknown): TodosDoc {
   if (!raw) return { todos: [], updatedAt: null };
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-    return { todos: cleanTodos(parsed?.todos), updatedAt: parsed?.updatedAt ?? null };
+    return {
+      todos: cleanTodos(parsed?.todos),
+      updatedAt: parsed?.updatedAt ?? null,
+      dumpMerged: parsed?.dumpMerged === true,
+    };
   } catch {
     return { todos: [], updatedAt: null };
   }
+}
+
+/* --------------------------------- corners -------------------------------- */
+// One document per person per day — same shape as Today's day doc, so the
+// corner reuses the ticks/notes save path. Keyed adit:corner:<person>:<date>.
+
+const CORNER_PREFIX = "adit:corner:";
+const CORNER_FILE = path.join(process.cwd(), ".data", "corners.json");
+
+const cornerKey = (person: string, date: DayKey) => `${CORNER_PREFIX}${person}:${date}`;
+
+async function readCornerFile(): Promise<Record<string, DayDoc>> {
+  assertLocal();
+  try {
+    return JSON.parse(await fs.readFile(CORNER_FILE, "utf8"));
+  } catch {
+    return {};
+  }
+}
+
+export async function getCornerDay(person: string, date: DayKey): Promise<DayDoc> {
+  if (usingRedis) return parseDoc(await redisCommand(["GET", cornerKey(person, date)]));
+  const all = await readCornerFile();
+  return all[`${person}:${date}`] ?? EMPTY_DAY;
+}
+
+export async function putCornerDay(
+  person: string,
+  date: DayKey,
+  doc: Omit<DayDoc, "updatedAt">
+): Promise<DayDoc> {
+  const saved: DayDoc = { ...doc, updatedAt: new Date().toISOString() };
+  if (usingRedis) {
+    await redisCommand(["SET", cornerKey(person, date), JSON.stringify(saved)]);
+    return saved;
+  }
+  const all = await readCornerFile();
+  all[`${person}:${date}`] = saved;
+  await fs.mkdir(path.dirname(CORNER_FILE), { recursive: true });
+  await fs.writeFile(CORNER_FILE, JSON.stringify(all, null, 2), "utf8");
+  return saved;
+}
+
+export async function getCornerDays(
+  person: string,
+  dates: DayKey[]
+): Promise<Record<DayKey, DayDoc>> {
+  const out: Record<DayKey, DayDoc> = {};
+  if (!dates.length) return out;
+  if (usingRedis) {
+    const raw = (await redisCommand(["MGET", ...dates.map((d) => cornerKey(person, d))])) as
+      | unknown[]
+      | null;
+    dates.forEach((date, i) => {
+      const doc = parseDoc(raw?.[i] ?? null);
+      if (doc.updatedAt) out[date] = doc;
+    });
+    return out;
+  }
+  const all = await readCornerFile();
+  for (const date of dates) {
+    const doc = all[`${person}:${date}`];
+    if (doc) out[date] = doc;
+  }
+  return out;
 }
 
 /* ------------------------------- Public API ------------------------------- */

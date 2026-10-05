@@ -29,6 +29,10 @@ that change correctly, deploy it, and tell him in plain language what happened.
 
 ## Making a change
 
+**Adding instalments / a payment plan to a student is a data change, not a code
+change.** Use the `/instalments` skill (`.claude/skills/instalments/SKILL.md`),
+which backs up, edits one student, and verifies. Never hand-POST the roster.
+
 ```bash
 npm install          # first time only
 npm run dev          # http://localhost:3000
@@ -69,7 +73,9 @@ top — ink background, bone text, one lime signal colour. Match what is there.
 | `app/page.tsx` | Tabs, checklist, clock, close-out report |
 | `app/roster-view.tsx` | Students tab |
 | `app/checkin-view.tsx` | Check-in tab |
-| `app/dump-view.tsx` | Checklist tab � the free-form brain-dump task list (`lib/dump.ts`, `/api/dump`, Redis key `adit:dump`). Separate from the scored daily checklist in `lib/tasks.ts`. |
+| `lib/corners.ts` | **The three Corners** (Adit, Shreeman, Sanskar): each person's checklist, clock, grade and close-out. Edit the `CORNERS` array to change a person's list. |
+| `app/corner-view.tsx` | One corner page. Days stored per person in Redis as `adit:corner:<person>:<date>` (`/api/corner`, `/api/corner/month`). |
+| `app/todos-view.tsx` | To-do tab. The old Checklist tab was retired into it on 5 Oct 2026 — its tasks were merged in once (as Adit's items, with priority) by `/api/todos`. `adit:dump` is kept untouched as a backup. |
 | `app/date-field.tsx` | Day/month/year dropdowns — read the comment before editing |
 
 Data lives in Upstash Redis, keyed `adit:*`. Credentials are environment

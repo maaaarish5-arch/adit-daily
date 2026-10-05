@@ -2962,3 +2962,50 @@ select.cell {
     margin-top: 0.3rem;
   }
 }
+
+/* ============================================================
+   Corners — one personal page each for Adit, Shreeman, Sanskar
+   ============================================================ */
+
+.corner-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+  margin: 0.2rem 0 1rem;
+}
+
+.corner-head h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.5rem;
+}
+
+.corner-blurb {
+  font-size: 0.72rem;
+  color: var(--bone-faint);
+  flex: 1;
+}
+
+.corner-pending {
+  margin-top: 1.6rem;
+}
+
+/* eight tabs — let the strip scroll sideways on a phone instead of wrapping */
+.tabs {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabs button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* priority on a to-do row, carried over from the old Checklist tab */
+.todo-owner.prio-tag {
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  border-color: var(--prio, var(--rule-strong));
+}

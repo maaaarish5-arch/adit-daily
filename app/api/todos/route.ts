@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getTodos, putTodos, usingRedis } from "@/lib/store";
-import { cleanTodos } from "@/lib/todos";
+import { getDump, getTodos, putTodos, usingRedis } from "@/lib/store";
+import { cleanTodos, mergeDump } from "@/lib/todos";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +12,12 @@ function authorized(req: Request): boolean {
 
 export async function GET() {
   try {
-    const doc = await getTodos();
+    let doc = await getTodos();
+    // The Checklist tab was retired into this list. Fold its tasks in once.
+    if (!doc.dumpMerged) {
+      const dump = await getDump();
+      doc = await putTodos(mergeDump(doc.todos, dump.tasks), true);
+    }
     return NextResponse.json({ ...doc, shared: usingRedis });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
@@ -30,7 +35,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "bad json" }, { status: 400 });
   }
   try {
-    return NextResponse.json(await putTodos(cleanTodos(body.todos)));
+    const { dumpMerged } = await getTodos();
+    return NextResponse.json(await putTodos(cleanTodos(body.todos), dumpMerged));
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

@@ -66,12 +66,13 @@ Do not try to fix a broken site by making more changes.
 
 ## What the app actually is
 
-Five tabs:
+Eight tabs:
 
 - **Today** — the checklist, the clock in/out, and the nightly close-out report
+- **Adit's / Shreeman's / Sanskar's Corner** — each person's own checklist, morning and evening clock, daily grade with a month calendar, and a close-out report (Done, Outstanding, Notes)
 - **Check-in** — who you took an update from today, and what came of it
 - **Students** — the roster, payment plans, instalments, what is owed
-- **Checklist** — your brain-dump list: every loose task, each with a priority (Highest, Urgent, Important)
+- **To-do** — one-off work with owners, dates and priorities (the old Checklist tab lives here now)
 - **SOP** — every procedure, every script, every link
 
 The checklist, the report and the SOP all come from one file (`lib/tasks.ts`),

@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import RosterView from "./roster-view";
 import CheckinView from "./checkin-view";
-import DumpView from "./dump-view";
 import TodosView from "./todos-view";
+import CornerView from "./corner-view";
+import { Sop } from "./sop";
+import { CORNERS, type CornerId } from "@/lib/corners";
 import {
   cleanEntries,
   coverageOf,
@@ -28,7 +30,6 @@ import {
   skippedNotes,
   slotKey,
   type Section,
-  type SopBlock,
   type Task,
   type Ticks,
 } from "@/lib/tasks";
@@ -58,106 +59,9 @@ import {
 
 type MonthData = Record<string, { done: number; percent: number }>;
 type SyncState = "idle" | "saving" | "saved" | "error";
-type Tab = "today" | "checkin" | "students" | "tasks" | "todo" | "sop";
+type Tab = "today" | CornerId | "checkin" | "students" | "todo" | "sop";
 
 const PASSCODE_KEY = "adit-daily:passcode";
-
-/* --------------------------------- SOP UI --------------------------------- */
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  return (
-    <button
-      className="copy"
-      data-copied={String(copied)}
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(text);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 2000);
-        } catch {
-          setCopied(false);
-        }
-      }}
-    >
-      {copied ? "Copied ✓" : "Copy"}
-    </button>
-  );
-}
-
-function Creds({ label, user, pass }: { label: string; user: string; pass: string }) {
-  const [shown, setShown] = useState(false);
-  return (
-    <div className="creds">
-      <span className="creds-label">{label}</span>
-      <code>{user}</code>
-      <code className="creds-pass">{shown ? pass : "••••••••"}</code>
-      <button className="copy" onClick={() => setShown((s) => !s)}>
-        {shown ? "Hide" : "Reveal"}
-      </button>
-    </div>
-  );
-}
-
-function Sop({ blocks }: { blocks: SopBlock[] }) {
-  return (
-    <div className="sop">
-      {blocks.map((block, i) => {
-        switch (block.kind) {
-          case "p":
-            return <p key={i}>{block.text}</p>;
-          case "steps":
-            return (
-              <ol key={i} className="sop-steps">
-                {block.items.map((item, j) => (
-                  <li key={j}>{item}</li>
-                ))}
-              </ol>
-            );
-          case "script":
-            return (
-              <div key={i} className="script">
-                <div className="script-head">
-                  <span>{block.title}</span>
-                  <CopyButton text={block.body} />
-                </div>
-                <pre>{block.body}</pre>
-              </div>
-            );
-          case "link":
-            return (
-              <a
-                key={i}
-                className="sop-link"
-                href={block.href}
-                target="_blank"
-                rel="noreferrer"
-              >
-                {block.label}
-                <span>{block.href.replace(/^https?:\/\//, "")}</span>
-              </a>
-            );
-          case "creds":
-            return (
-              <Creds key={i} label={block.label} user={block.user} pass={block.pass} />
-            );
-          case "warn":
-            return (
-              <p key={i} className="sop-warn">
-                {block.text}
-              </p>
-            );
-          case "pending":
-            return (
-              <p key={i} className="sop-pending">
-                {block.text}
-              </p>
-            );
-        }
-      })}
-    </div>
-  );
-}
 
 /* -------------------------------- the page -------------------------------- */
 
@@ -726,6 +630,11 @@ export default function Page() {
         <button data-on={String(tab === "today")} onClick={() => setTab("today")}>
           Today
         </button>
+        {CORNERS.map((c) => (
+          <button key={c.id} data-on={String(tab === c.id)} onClick={() => setTab(c.id)}>
+            {c.name}&rsquo;s Corner
+          </button>
+        ))}
         <button
           data-on={String(tab === "checkin")}
           onClick={() => setTab("checkin")}
@@ -737,9 +646,6 @@ export default function Page() {
           onClick={() => setTab("students")}
         >
           Students
-        </button>
-        <button data-on={String(tab === "tasks")} onClick={() => setTab("tasks")}>
-          Checklist
         </button>
         <button data-on={String(tab === "todo")} onClick={() => setTab("todo")}>
           To-do
@@ -755,8 +661,8 @@ export default function Page() {
         </div>
       )}
 
-      {tab === "tasks" ? (
-        <DumpView />
+      {CORNERS.some((c) => c.id === tab) ? (
+        <CornerView key={tab} corner={CORNERS.find((c) => c.id === tab)!} />
       ) : tab === "todo" ? (
         <TodosView />
       ) : tab === "checkin" ? (
@@ -783,6 +689,29 @@ export default function Page() {
               </div>
               <p className="playbook-blurb">{pb.blurb}</p>
               <Sop blocks={pb.blocks} />
+            </section>
+          ))}
+
+          {CORNERS.filter((c) => c.sections.length).map((c) => (
+            <section className="section" key={`corner-${c.id}`}>
+              <div className="section-head">
+                <h2>{c.name}&rsquo;s Corner — daily flow</h2>
+                <span className="hair" />
+              </div>
+              <p className="playbook-blurb">{c.blurb}</p>
+              {c.sections.map((section) => (
+                <div className="manual-entry" key={section.id}>
+                  <h3>{section.title}</h3>
+                  <ol className="sop-steps">
+                    {section.tasks.map((task) => (
+                      <li key={task.id}>
+                        {task.label}
+                        {task.detail ? ` — ${task.detail}` : ""}
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              ))}
             </section>
           ))}
 

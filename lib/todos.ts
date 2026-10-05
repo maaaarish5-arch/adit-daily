@@ -8,6 +8,8 @@
 // Seeded from the 29 September planning meeting (Marish, Adit, Sanskar,
 // Shreeman), where ops moved off Adit and onto the two new hires.
 
+import { isPriority, type DumpTask, type Priority } from "./dump";
+
 export const OWNERS = ["Marish", "Adit", "Ops team", "App"] as const;
 export type Owner = (typeof OWNERS)[number];
 
@@ -28,6 +30,8 @@ export type Todo = {
   done: boolean;
   /** ISO instant it was ticked. */
   doneAt: string;
+  /** Priority carried over from the old Checklist tab; "" when unset. */
+  p: Priority | "";
 };
 
 export const EMPTY_TODOS: Todo[] = [];
@@ -46,6 +50,7 @@ export function cleanTodo(raw: unknown, i: number): Todo | null {
     due: typeof r.due === "string" && DATE_RE.test(r.due) ? r.due : "",
     done: r.done === true,
     doneAt: typeof r.doneAt === "string" ? r.doneAt.slice(0, 40) : "",
+    p: isPriority(r.p) ? r.p : "",
   };
 }
 
@@ -66,7 +71,27 @@ export function blankTodo(owner: Owner): Todo {
     due: "",
     done: false,
     doneAt: "",
+    p: "",
   };
+}
+
+/** The old Checklist tab, folded into the to-do list as Adit's items. Runs
+ *  once, server-side (see /api/todos); ids are kept so it can never double up. */
+export function mergeDump(todos: Todo[], dump: DumpTask[]): Todo[] {
+  const have = new Set(todos.map((t) => t.id));
+  const added: Todo[] = dump
+    .filter((d) => d.text.trim() && !have.has(`dump-${d.id}`.slice(0, 40)))
+    .map((d) => ({
+      id: `dump-${d.id}`.slice(0, 40),
+      title: d.text.trim().slice(0, 300),
+      detail: "",
+      owner: "Adit" as Owner,
+      due: "",
+      done: d.done,
+      doneAt: d.done ? d.doneAt ?? "" : "",
+      p: d.p,
+    }));
+  return [...todos, ...added];
 }
 
 export type OwnerProgress = { owner: Owner; done: number; total: number };
