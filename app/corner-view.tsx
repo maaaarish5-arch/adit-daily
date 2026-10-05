@@ -27,6 +27,13 @@ import {
 } from "@/lib/tasks";
 import { duration, istTime } from "@/lib/shifts";
 import {
+  cleanEntries,
+  coverageOf,
+  UNKNOWN_COVERAGE,
+  type Coverage,
+} from "@/lib/checkin";
+import { cleanRoster } from "@/lib/roster";
+import {
   dayNumber,
   daysInMonth,
   longDate,
@@ -44,7 +51,13 @@ type SyncState = "idle" | "saving" | "saved" | "error";
 
 const PASSCODE_KEY = "adit-daily:passcode";
 
-export default function CornerView({ corner }: { corner: Corner }) {
+export default function CornerView({
+  corner,
+  onOpenCheckin,
+}: {
+  corner: Corner;
+  onOpenCheckin: () => void;
+}) {
   const [today, setToday] = useState<string | null>(null);
   const [date, setDate] = useState<string | null>(null);
   const [ticks, setTicks] = useState<Ticks>({});
@@ -58,6 +71,7 @@ export default function CornerView({ corner }: { corner: Corner }) {
   const [report, setReport] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [storeError, setStoreError] = useState<string | null>(null);
+  const [coverage, setCoverage] = useState<Coverage>(UNKNOWN_COVERAGE);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -93,6 +107,27 @@ export default function CornerView({ corner }: { corner: Corner }) {
       cancelled = true;
     };
   }, [date, corner.id]);
+
+  // The check-in row is read off the roster and the day's Check-in register,
+  // exactly like Today's sweep. Reloaded whenever the window regains focus.
+  const usesCheckin = corner.sections.some((s) => s.tasks.some((t) => t.coverage));
+  useEffect(() => {
+    if (!date || !usesCheckin) return;
+    const load = () =>
+      Promise.all([
+        fetch("/api/roster", { cache: "no-store" }).then((r) => r.json()),
+        fetch(`/api/checkin?date=${date}`, { cache: "no-store" }).then((r) => r.json()),
+      ])
+        .then(([roster, checkin]) =>
+          setCoverage(
+            coverageOf(cleanRoster(roster?.students), cleanEntries(checkin?.entries))
+          )
+        )
+        .catch(() => setCoverage(UNKNOWN_COVERAGE));
+    load();
+    window.addEventListener("focus", load);
+    return () => window.removeEventListener("focus", load);
+  }, [date, usesCheckin]);
 
   const loadMonth = useCallback(
     (m: string) => {
@@ -178,6 +213,7 @@ export default function CornerView({ corner }: { corner: Corner }) {
     });
 
   const toggleRow = (task: Task) => {
+    if (task.coverage) return;
     const done = isCornerTaskDone(corner, task, ticks);
     mutate((draft) => {
       if (task.pills?.length) {
@@ -211,11 +247,11 @@ export default function CornerView({ corner }: { corner: Corner }) {
 
   /* ------------------------------ close-out --------------------------------- */
 
-  const score = cornerScore(corner, ticks);
+  const score = cornerScore(corner, ticks, coverage);
 
   const buildReport = () => {
     if (!date) return;
-    const { done, open: stillOpen } = cornerSplit(corner, ticks);
+    const { done, open: stillOpen } = cornerSplit(corner, ticks, coverage);
     const lines = [
       `${corner.name}'s close-out — ${longDate(date)}`,
       score.total
@@ -265,7 +301,7 @@ export default function CornerView({ corner }: { corner: Corner }) {
 
   const renderTask = (task: Task, section: Section) => {
     rowIndex += 1;
-    const isDone = isCornerTaskDone(corner, task, ticks);
+    const isDone = isCornerTaskDone(corner, task, ticks, coverage);
     const count = task.counter ? counterValue(task, ticks) : 0;
     const partial =
       !isDone &&
@@ -330,6 +366,38 @@ export default function CornerView({ corner }: { corner: Corner }) {
             </div>
           )}
 
+          {task.coverage && (
+            <div className="sweep">
+              <div className="sweep-head">
+                <span className="sweep-read" data-on={String(isDone)}>
+                  {coverage.taken}
+                  <i>/{coverage.total}</i>
+                </span>
+                <span className="sweep-noun">
+                  {coverage.known ? "active students ticked" : "reading the roster…"}
+                </span>
+                <button className="pill" onClick={onOpenCheckin}>
+                  Open check-in
+                </button>
+              </div>
+              <div className="sweep-bar">
+                <i
+                  style={{
+                    width: `${coverage.total ? (coverage.taken / coverage.total) * 100 : 0}%`,
+                  }}
+                />
+              </div>
+              {coverage.known && coverage.missing.length > 0 && (
+                <p className="sweep-missing">
+                  <b>Not yet reached:</b> {coverage.missing.slice(0, 10).join(", ")}
+                  {coverage.missing.length > 10
+                    ? ` · and ${coverage.missing.length - 10} more`
+                    : ""}
+                </p>
+              )}
+            </div>
+          )}
+
           {task.counter && (
             <div className="counter">
               <button
@@ -370,8 +438,18 @@ export default function CornerView({ corner }: { corner: Corner }) {
           data-on={String(isDone)}
           data-partial={String(partial)}
           onClick={() => toggleRow(task)}
+          disabled={Boolean(task.coverage)}
           aria-pressed={isDone}
-          aria-label={`Mark "${task.label}" ${isDone ? "not done" : "done"}`}
+          title={
+            task.coverage
+              ? "Closes itself once every active student is ticked on the check-in"
+              : undefined
+          }
+          aria-label={
+            task.coverage
+              ? `${task.label} — ${coverage.taken} of ${coverage.total} ticked`
+              : `Mark "${task.label}" ${isDone ? "not done" : "done"}`
+          }
         >
           <svg viewBox="0 0 24 24">
             <polyline points="4,12 10,18 20,6" />
@@ -558,7 +636,7 @@ export default function CornerView({ corner }: { corner: Corner }) {
           corner.sections.map((section, si) => {
             const skipped = isCornerSectionSkipped(section, ticks);
             const sectionDone = section.tasks.filter((t) =>
-              isCornerTaskDone(corner, t, ticks)
+              isCornerTaskDone(corner, t, ticks, coverage)
             ).length;
             return (
               <section

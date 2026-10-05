@@ -662,7 +662,11 @@ export default function Page() {
       )}
 
       {CORNERS.some((c) => c.id === tab) ? (
-        <CornerView key={tab} corner={CORNERS.find((c) => c.id === tab)!} />
+        <CornerView
+          key={tab}
+          corner={CORNERS.find((c) => c.id === tab)!}
+          onOpenCheckin={() => setTab("checkin")}
+        />
       ) : tab === "todo" ? (
         <TodosView />
       ) : tab === "checkin" ? (

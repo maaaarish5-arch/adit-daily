@@ -19,6 +19,7 @@ import {
   type Ticks,
 } from "./tasks";
 import { duration, istTime, stampAt } from "./shifts";
+import type { Coverage } from "./checkin";
 
 export type CornerId = "adit" | "shreeman" | "sanskar";
 
@@ -140,7 +141,8 @@ export const CORNERS: Corner[] = [
             id: "sh-checkins-noon",
             label: "All client check-ins done by noon",
             detail:
-              "Same loop as the morning: check chat → write down what came out → get it reviewed by Adit at once → make sure Adit closes the loop wherever he can.",
+              "Same loop as the morning: check chat → write down what came out → get it reviewed by Adit at once → make sure Adit closes the loop wherever he can. Closes itself once every active student is ticked on the Check-in tab.",
+            coverage: true,
           },
           {
             id: "sh-p1-p3",
@@ -272,9 +274,16 @@ export function isCornerSectionSkipped(section: Section, ticks: Ticks): boolean 
   return Boolean(section.skip && ticks[section.skip.id]);
 }
 
-export function isCornerTaskDone(c: Corner, task: Task, ticks: Ticks): boolean {
+export function isCornerTaskDone(
+  c: Corner,
+  task: Task,
+  ticks: Ticks,
+  coverage?: Coverage
+): boolean {
   const section = c.sections.find((s) => s.tasks.includes(task));
   if (section && isCornerSectionSkipped(section, ticks)) return true;
+  // Read off the Check-in tab, same as Today's sweep — never a tap.
+  if (task.coverage) return Boolean(coverage?.complete);
   if (task.pills?.length) return task.pills.every((p) => ticks[pillKey(task, p)]);
   if (task.slots?.length) return task.slots.every((s) => Boolean(ticks[slotKey(task, s)]));
   if (task.counter) return counterValue(task, ticks) >= task.counter.target;
@@ -289,16 +298,20 @@ export type CornerScore = {
   grade: "A+" | "C-" | null;
 };
 
-export function cornerScore(c: Corner, ticks: Ticks): CornerScore {
+export function cornerScore(c: Corner, ticks: Ticks, coverage?: Coverage): CornerScore {
   const tasks = cornerTasks(c);
   const total = tasks.length;
-  const done = tasks.filter((t) => isCornerTaskDone(c, t, ticks)).length;
+  const done = tasks.filter((t) => isCornerTaskDone(c, t, ticks, coverage)).length;
   const percent = total ? Math.round((done / total) * 100) : 0;
   return { done, total, percent, grade: total ? (percent >= 75 ? "A+" : "C-") : null };
 }
 
 /** One line per row, split into done and still open, for the close-out. */
-export function cornerSplit(c: Corner, ticks: Ticks): { done: string[]; open: string[] } {
+export function cornerSplit(
+  c: Corner,
+  ticks: Ticks,
+  coverage?: Coverage
+): { done: string[]; open: string[] } {
   const done: string[] = [];
   const open: string[] = [];
   for (const section of c.sections) {
@@ -308,11 +321,13 @@ export function cornerSplit(c: Corner, ticks: Ticks): { done: string[]; open: st
     }
     for (const task of section.tasks) {
       const line = `${section.title} · ${task.label}`;
-      if (isCornerTaskDone(c, task, ticks)) {
+      if (isCornerTaskDone(c, task, ticks, coverage)) {
         done.push(line);
         continue;
       }
-      if (task.pills?.length) {
+      if (task.coverage) {
+        open.push(`${line} (${coverage?.taken ?? 0}/${coverage?.total ?? 0} students ticked)`);
+      } else if (task.pills?.length) {
         const missing = task.pills.filter((p) => !ticks[pillKey(task, p)]).map((p) => p.label);
         open.push(`${line} (${missing.join(", ")})`);
       } else if (task.slots?.length) {

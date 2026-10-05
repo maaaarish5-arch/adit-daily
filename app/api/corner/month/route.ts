@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { daysInMonth, isValidMonth } from "@/lib/date";
 import { cornerById, cornerScore } from "@/lib/corners";
-import { getCornerDays } from "@/lib/store";
+import { getCheckins, getCornerDays, getRoster } from "@/lib/store";
+import { coverageOf } from "@/lib/checkin";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +15,20 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "bad person or month" }, { status: 400 });
   }
   try {
-    const docs = await getCornerDays(corner.id, daysInMonth(month));
+    // A check-in row is scored off the day's Check-in register and the roster.
+    const dates = daysInMonth(month);
+    const usesCheckin = corner.sections.some((s) => s.tasks.some((t) => t.coverage));
+    const [docs, checkins, roster] = await Promise.all([
+      getCornerDays(corner.id, dates),
+      usesCheckin ? getCheckins(dates) : Promise.resolve(null),
+      usesCheckin ? getRoster() : Promise.resolve(null),
+    ]);
     const days: Record<string, { done: number; percent: number }> = {};
     for (const [date, doc] of Object.entries(docs)) {
-      const s = cornerScore(corner, doc.ticks);
+      const cov = roster
+        ? coverageOf(roster.students, checkins?.[date]?.entries ?? {})
+        : undefined;
+      const s = cornerScore(corner, doc.ticks, cov);
       days[date] = { done: s.done, percent: s.percent };
     }
     return NextResponse.json({ person: corner.id, month, days });
