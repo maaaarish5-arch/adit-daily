@@ -120,7 +120,7 @@ export default function CornerView({
       ])
         .then(([roster, checkin]) =>
           setCoverage(
-            coverageOf(cleanRoster(roster?.students), cleanEntries(checkin?.entries))
+            coverageOf(cleanRoster(roster?.students), cleanEntries(checkin?.entries), date)
           )
         )
         .catch(() => setCoverage(UNKNOWN_COVERAGE));

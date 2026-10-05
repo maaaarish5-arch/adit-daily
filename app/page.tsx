@@ -174,7 +174,7 @@ export default function Page() {
     ])
       .then(([roster, checkin]) => {
         setCoverage(
-          coverageOf(cleanRoster(roster?.students), cleanEntries(checkin?.entries))
+          coverageOf(cleanRoster(roster?.students), cleanEntries(checkin?.entries), forDate)
         );
       })
       .catch(() => setCoverage(UNKNOWN_COVERAGE));
@@ -374,6 +374,10 @@ export default function Page() {
             coverage.missing.length
               ? `\nNot reached:\n${coverage.missing.map((n) => `  · ${n}`).join("\n")}`
               : " — everyone reached."
+          }${
+            coverage.dnd.length
+              ? `\nOn DND (no update owed):\n${coverage.dnd.map((n) => `  · ${n}`).join("\n")}`
+              : ""
           }`
         : "Student check-in: not loaded.",
       skipped.length ? `Not applicable:\n${skipped.map((s) => `  · ${s}`).join("\n")}` : null,

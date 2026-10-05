@@ -3,7 +3,15 @@
 // One document per day: `adit:checkin:YYYY-MM-DD`. The roster supplies who
 // exists; this supplies what happened. Adit ticks, Dr. Marish sees the same day.
 
-import { MONTHS, PHASE_PRIORITY, currentPhase, phaseName, type Phase, type Student } from "./roster";
+import {
+  MONTHS,
+  PHASE_PRIORITY,
+  currentPhase,
+  onDnd,
+  phaseName,
+  type Phase,
+  type Student,
+} from "./roster";
 
 export type Entry = {
   /** Checked — an update was taken. */
@@ -40,19 +48,21 @@ export function cleanEntries(raw: unknown): Entries {
 // has since come off the roster. Losing a note because a row was deleted would
 // be worse than showing a tidy list.
 
-export type Row = Student & { archived?: boolean };
+/** `dnd` is worked out for the day being viewed — see onDnd(). */
+export type Row = Student & { archived?: boolean; dnd?: boolean };
 
 /** Section order: Active students by phase priority (Phase 3 NBME, then
  *  Phase 1 new, then Phase 2 maintenance, then Phase 4 exam date set, then
- *  Match) → Completed → Paused → Left → Archived. Inside a section, newest
- *  join month first. */
+ *  Match) → Do not disturb → Completed → Paused → Left → Archived. Inside a
+ *  section, newest join month first. */
 const P = PHASE_PRIORITY.length;
 
 export function rankOf(s: Row): number {
-  if (s.archived) return P + 4;
-  if (s.status === "Left") return P + 3;
-  if (s.status === "Paused") return P + 2;
-  if (s.status === "Completed") return P + 1;
+  if (s.archived) return P + 5;
+  if (s.status === "Left") return P + 4;
+  if (s.status === "Paused") return P + 3;
+  if (s.status === "Completed") return P + 2;
+  if (s.dnd) return P + 1;
   return PHASE_PRIORITY.indexOf(currentPhase(s)) + 1;
 }
 
@@ -68,14 +78,15 @@ export const BANDS: Record<number, { cls: string; label: string }> = {
       { cls: `phase-${p}`, label: `${phaseName(p)}${PRIORITY_NOTE[p] ?? ""}` },
     ])
   ),
-  [P + 1]: { cls: "completed", label: "Completed" },
-  [P + 2]: { cls: "paused", label: "Paused" },
-  [P + 3]: { cls: "left", label: "Left" },
-  [P + 4]: { cls: "archived", label: "Archived — no longer on the tracker" },
+  [P + 1]: { cls: "dnd", label: "Do not disturb — no update owed today" },
+  [P + 2]: { cls: "completed", label: "Completed" },
+  [P + 3]: { cls: "paused", label: "Paused" },
+  [P + 4]: { cls: "left", label: "Left" },
+  [P + 5]: { cls: "archived", label: "Archived — no longer on the tracker" },
 };
 
 /** Roster rows plus any orphaned entries from this day, in display order. */
-export function buildRows(students: Student[], entries: Entries): Row[] {
+export function buildRows(students: Student[], entries: Entries, day: string): Row[] {
   const known = new Set(students.map((s) => s.id));
   const orphans: Row[] = Object.keys(entries)
     .filter((id) => !known.has(id))
@@ -87,6 +98,8 @@ export function buildRows(students: Student[], entries: Entries): Row[] {
       phase: 2 as const,
       phaseSince: "",
       examDate: "",
+      dndFrom: "",
+      dndUntil: "",
       currency: "USD" as const,
       total: 0,
       installments: [],
@@ -96,7 +109,10 @@ export function buildRows(students: Student[], entries: Entries): Row[] {
       archived: true,
     }));
 
-  const all = [...students, ...orphans];
+  const all: Row[] = [
+    ...students.map((s) => ({ ...s, dnd: s.status === "Active" && onDnd(s, day) })),
+    ...orphans,
+  ];
   const order = new Map(all.map((r, i) => [r.id, i]));
   const now = new Date().getMonth();
   return all.sort((a, b) => {
@@ -138,6 +154,8 @@ export type Coverage = {
   total: number;
   /** Names still waiting, in display order — the nightly report needs these. */
   missing: string[];
+  /** Active students on DND today — not owed an update, not counted. */
+  dnd: string[];
   /** Every active student ticked. False when the roster is empty. */
   complete: boolean;
   /** False until the roster and the day's entries have both loaded. */
@@ -148,17 +166,24 @@ export const UNKNOWN_COVERAGE: Coverage = {
   taken: 0,
   total: 0,
   missing: [],
+  dnd: [],
   complete: false,
   known: false,
 };
 
-/** The students owed an update today. */
-export function owedRows(rows: Row[]): Row[] {
+/** Every Active student, DND or not — what the Check-in list shows. */
+export function activeRows(rows: Row[]): Row[] {
   return rows.filter((r) => !r.archived && r.status === "Active");
 }
 
-export function coverageOf(students: Student[], entries: Entries): Coverage {
-  const owed = owedRows(buildRows(students, entries));
+/** The students owed an update that day: Active and not on DND. */
+export function owedRows(rows: Row[]): Row[] {
+  return activeRows(rows).filter((r) => !r.dnd);
+}
+
+export function coverageOf(students: Student[], entries: Entries, day: string): Coverage {
+  const all = buildRows(students, entries, day);
+  const owed = owedRows(all);
   const missing = owed
     .filter((r) => !entryFor(entries, r.id).c)
     .map((r) => r.name || "(unnamed)");
@@ -167,6 +192,9 @@ export function coverageOf(students: Student[], entries: Entries): Coverage {
     taken,
     total: owed.length,
     missing,
+    dnd: activeRows(all)
+      .filter((r) => r.dnd)
+      .map((r) => r.name || "(unnamed)"),
     complete: owed.length > 0 && missing.length === 0,
     known: true,
   };
