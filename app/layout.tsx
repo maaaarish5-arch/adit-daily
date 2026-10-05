@@ -37,6 +37,12 @@ export default function RootLayout({
     <html lang="en" className={`${display.variable} ${mono.variable}`}>
       <body>
         <div className="grain" aria-hidden />
+        {process.env.VERCEL_ENV === "preview" && (
+          <div className="preview-banner">
+            Preview — a copy of the live data. Changes here are not saved to the
+            real tracker.
+          </div>
+        )}
         {children}
       </body>
     </html>
