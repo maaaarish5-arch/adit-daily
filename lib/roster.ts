@@ -6,6 +6,9 @@
 export const STATUSES = [
   "Active",
   "Paused",
+  // Exam written, results not out yet. Not Completed, so nobody asks for a
+  // review too early; off the daily check-in like Completed.
+  "Awaiting results",
   "Completed",
   "Left",
   "Pending",

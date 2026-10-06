@@ -1370,6 +1370,11 @@ select.cell {
 .cell.tag[data-status="Completed"] {
   color: var(--bone);
 }
+/* exam written, results not out — not done yet, so not the Completed look */
+.cell.tag[data-status="Awaiting results"] {
+  color: var(--signal-deep);
+  border-style: dashed;
+}
 
 .cell.tag[data-payment="Paid"] {
   color: var(--signal);

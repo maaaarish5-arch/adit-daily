@@ -44,8 +44,8 @@ export function cleanEntries(raw: unknown): Entries {
 }
 
 /* -------------------------------- ordering -------------------------------- */
-// Active first (by phase), then Paused, then Left, then anyone who has a check-in today but
-// has since come off the roster. Losing a note because a row was deleted would
+// Active first (by phase), then Awaiting results, Completed, Paused, Left, then
+// anyone who has a check-in today but has since come off the roster. Losing a note because a row was deleted would
 // be worse than showing a tidy list.
 
 /** `dnd` is worked out for the day being viewed — see onDnd(). */
@@ -53,15 +53,16 @@ export type Row = Student & { archived?: boolean; dnd?: boolean };
 
 /** Section order: Active students by phase priority (Phase 3 NBME, then
  *  Phase 1 new, then Phase 2 maintenance, then Phase 4 exam date set, then
- *  Match) → Do not disturb → Completed → Paused → Left → Archived. Inside a
- *  section, newest join month first. */
+ *  Match) → Do not disturb → Awaiting results → Completed → Paused → Left →
+ *  Archived. Inside a section, newest join month first. */
 const P = PHASE_PRIORITY.length;
 
 export function rankOf(s: Row): number {
-  if (s.archived) return P + 5;
-  if (s.status === "Left") return P + 4;
-  if (s.status === "Paused") return P + 3;
-  if (s.status === "Completed") return P + 2;
+  if (s.archived) return P + 6;
+  if (s.status === "Left") return P + 5;
+  if (s.status === "Paused") return P + 4;
+  if (s.status === "Completed") return P + 3;
+  if (s.status === "Awaiting results") return P + 2;
   if (s.dnd) return P + 1;
   return PHASE_PRIORITY.indexOf(currentPhase(s)) + 1;
 }
@@ -79,10 +80,11 @@ export const BANDS: Record<number, { cls: string; label: string }> = {
     ])
   ),
   [P + 1]: { cls: "dnd", label: "Do not disturb — no update owed today" },
-  [P + 2]: { cls: "completed", label: "Completed" },
-  [P + 3]: { cls: "paused", label: "Paused" },
-  [P + 4]: { cls: "left", label: "Left" },
-  [P + 5]: { cls: "archived", label: "Archived — no longer on the tracker" },
+  [P + 2]: { cls: "awaiting", label: "Awaiting results — exam written, results not out" },
+  [P + 3]: { cls: "completed", label: "Completed" },
+  [P + 4]: { cls: "paused", label: "Paused" },
+  [P + 5]: { cls: "left", label: "Left" },
+  [P + 6]: { cls: "archived", label: "Archived — no longer on the tracker" },
 };
 
 /** Roster rows plus any orphaned entries from this day, in display order. */
