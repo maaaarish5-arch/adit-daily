@@ -110,6 +110,7 @@ export function buildRows(students: Student[], entries: Entries, day: string): R
       payment: "Pending" as const,
       remaining: 0,
       notes: "",
+      progress: { sys: {}, nbme: {} },
       archived: true,
     }));
 

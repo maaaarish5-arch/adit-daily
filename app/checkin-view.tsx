@@ -31,6 +31,8 @@ import {
 } from "@/lib/checkin";
 import { longDate, shiftDays, todayKey } from "@/lib/date";
 import HomeTime from "./home-time";
+import ProgressPills from "./progress-pills";
+import { pillsFor } from "@/lib/progress";
 
 type SyncState = "idle" | "saving" | "saved" | "error";
 
@@ -178,6 +180,33 @@ export default function CheckinView() {
       loadRoster();
     }
   }, [loadRoster]);
+
+  // Progress has its own route that changes one pill on the server, so this
+  // never sends the whole roster and can never overwrite anyone else's edit.
+  const saveProgress = useCallback(
+    async (id: string, kind: "sys" | "nbme", key: string, pct: number | null) => {
+      setSync("saving");
+      try {
+        const r = await fetch("/api/progress", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-passcode": localStorage.getItem(PASSCODE_KEY) ?? "",
+          },
+          body: JSON.stringify({ id, kind, key, pct }),
+        });
+        const d = await r.json();
+        if (!r.ok || !d.progress) throw new Error(d.error ?? "save failed");
+        setStudents((list) => list.map((s) => (s.id === id ? { ...s, progress: d.progress } : s)));
+        setSync("saved");
+        return true;
+      } catch {
+        setSync("error");
+        return false;
+      }
+    },
+    []
+  );
 
   // Setting Phase 1 restarts its two-week clock from today.
   const changePhase = (id: string, p: Phase) =>
@@ -528,13 +557,26 @@ export default function CheckinView() {
                   )}
                 </div>
 
-                <input
-                  className="note"
-                  value={e.n}
-                  onChange={(ev) => patch(r.id, { n: ev.target.value })}
-                  placeholder="What came out of the update…"
-                  aria-label={`Note for ${r.name}`}
-                />
+                <div className="note-col">
+                  <input
+                    className="note"
+                    value={e.n}
+                    onChange={(ev) => patch(r.id, { n: ev.target.value })}
+                    placeholder="What came out of the update…"
+                    aria-label={`Note for ${r.name}`}
+                  />
+                  {r.status === "Active" && !r.archived && (() => {
+                    const mode = pillsFor(currentPhase(r));
+                    return mode ? (
+                      <ProgressPills
+                        name={r.name}
+                        mode={mode}
+                        progress={r.progress ?? { sys: {}, nbme: {} }}
+                        onSave={(kind, key, pct) => saveProgress(r.id, kind, key, pct)}
+                      />
+                    ) : null;
+                  })()}
+                </div>
               </div>
             </div>
           );
