@@ -1,6 +1,6 @@
 # Read me first, Adit
 
-This is the code behind your daily tracker: **https://adit-daily.vercel.app**
+This is the code behind your daily tracker: **https://usmlevault-daily.vercel.app**
 
 You do not need to understand it. You need to know three things: how to open it,
 how to ask for a change, and what you must not do alone.

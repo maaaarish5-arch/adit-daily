@@ -53,7 +53,7 @@ export const usingRedis = Boolean(REST_URL && REST_TOKEN) || previewSandbox;
 // writes stay in this instance's memory. Nothing is ever sent back to the live
 // site, and a cold start simply begins again from a fresh copy.
 
-const LIVE_SITE = "https://adit-daily.vercel.app";
+const LIVE_SITE = "https://usmlevault-daily.vercel.app";
 
 const sandbox: Map<string, unknown> = ((globalThis as { __aditSandbox?: Map<string, unknown> })
   .__aditSandbox ??= new Map());

@@ -1,6 +1,6 @@
 # adit-daily — Founder's Office daily tracker
 
-This repo is the app Adit works from every day: **https://adit-daily.vercel.app**
+This repo is the app Adit works from every day: **https://usmlevault-daily.vercel.app**
 
 Adit is not a developer. He will describe what he wants in plain language — a
 new task on the checklist, a change to a script, a new link. Your job is to make
@@ -58,8 +58,8 @@ Verify it actually shipped — the page is client-rendered, so `curl` on the HTM
 will not show your text. Check the built bundle instead:
 
 ```bash
-for f in $(curl -s https://adit-daily.vercel.app/ | grep -o '/_next/static/chunks/app/page[a-zA-Z0-9._-]*\.js' | sort -u); do
-  curl -s "https://adit-daily.vercel.app$f" | grep -q "some exact text you added" && echo "LIVE"
+for f in $(curl -s https://usmlevault-daily.vercel.app/ | grep -o '/_next/static/chunks/app/page[a-zA-Z0-9._-]*\.js' | sort -u); do
+  curl -s "https://usmlevault-daily.vercel.app$f" | grep -q "some exact text you added" && echo "LIVE"
 done
 ```
 
@@ -110,7 +110,7 @@ need them. Running locally with no credentials falls back to JSON files under
 ## Backing up before risky work
 
 ```bash
-curl -s https://adit-daily.vercel.app/api/roster > roster-backup.json
+curl -s https://usmlevault-daily.vercel.app/api/roster > roster-backup.json
 ```
 
 That is the roster. For everything, ask Dr. Marish — he has the Redis keys.
