@@ -51,8 +51,8 @@ export function cleanEntries(raw: unknown): Entries {
 /** `dnd` is worked out for the day being viewed — see onDnd(). */
 export type Row = Student & { archived?: boolean; dnd?: boolean };
 
-/** Section order: Active students by phase priority (Phase 3 NBME, then
- *  Phase 1 new, then Phase 2 maintenance, then Phase 4 exam date set, then
+/** Section order: Active students by phase priority (Phase 4 exam date set,
+ *  then Phase 3 NBME, then Phase 1 new, then Phase 2 maintenance, then
  *  Match) → Do not disturb → Awaiting results → Completed → Paused → Left →
  *  Archived. Inside a section, newest join month first. */
 const P = PHASE_PRIORITY.length;
@@ -68,7 +68,8 @@ export function rankOf(s: Row): number {
 }
 
 const PRIORITY_NOTE: Partial<Record<Phase, string>> = {
-  3: " — highest priority",
+  4: " — highest priority",
+  3: " — high priority",
   1: " — high priority",
 };
 

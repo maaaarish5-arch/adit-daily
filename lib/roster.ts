@@ -37,8 +37,8 @@ export const MONTHS = [
 // Where a student is in the programme, and so how hard they need watching.
 //   1 — New student: constant, high-priority attention.
 //   2 — Maintenance.
-//   3 — Exam coming up, sitting NBMEs: the highest priority of all.
-//   4 — Exam date set. Carries the date itself in `examDate`.
+//   3 — Exam coming up, sitting NBMEs: high priority.
+//   4 — Exam date set: the highest priority of all. Carries the date itself in `examDate`.
 //   5 — Match. Stored as 5 but always shown as "M", never "Phase 5".
 // Phase 1 lasts two weeks, then the student drops to Phase 2 on their own.
 // Students stored as 4 before 5 Oct 2026 were "E/M"; they now read as Phase 4.
@@ -69,7 +69,7 @@ export function phaseName(p: Phase): string {
 }
 
 /** Priority order, highest first — how the check-in list is stacked. */
-export const PHASE_PRIORITY: Phase[] = [3, 1, 2, 4, 5];
+export const PHASE_PRIORITY: Phase[] = [4, 3, 1, 2, 5];
 
 export const PHASE1_DAYS = 14;
 
