@@ -96,8 +96,14 @@ async function sandboxCommand(command: (string | number)[]): Promise<unknown> {
     case "MGET":
       return Promise.all([key, ...rest].map(sandboxGet));
     case "SET":
+      // NX: only if absent (the roster lock). PX is ignored — a preview
+      // instance is short-lived and releases its lock with DEL.
+      if (rest.includes("NX") && sandbox.get(key) != null) return null;
       sandbox.set(key, rest[0]);
       return "OK";
+    case "DEL":
+      sandbox.delete(key);
+      return 1;
     case "RPUSH": {
       const list = (sandbox.get(key) as string[] | undefined) ?? [];
       sandbox.set(key, [...list, ...rest]);
@@ -207,6 +213,70 @@ export async function putRoster(students: Student[]): Promise<Roster> {
   await fs.mkdir(path.dirname(ROSTER_FILE), { recursive: true });
   await fs.writeFile(ROSTER_FILE, JSON.stringify(saved, null, 2), "utf8");
   return saved;
+}
+
+/* ------------------------- safe read-change-write ------------------------- */
+// Every server-side roster change goes through updateRoster(). Two guards:
+//   1. Saves take turns — an in-process queue, plus a short Redis lock so two
+//      server instances can't interleave a read and a write either.
+//   2. If the stored roster can't be read, nothing is written. Treating an
+//      unreadable roster as empty and saving would wipe every student.
+
+const LOCK_KEY = "adit:roster:lock";
+const LOCK_MS = 5_000;
+let queue: Promise<unknown> = Promise.resolve();
+
+async function withRedisLock<T>(fn: () => Promise<T>): Promise<T> {
+  if (!usingRedis) return fn();
+  const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const deadline = Date.now() + LOCK_MS;
+  while ((await redisCommand(["SET", LOCK_KEY, token, "NX", "PX", LOCK_MS])) !== "OK") {
+    if (Date.now() > deadline) throw new Error("Roster is busy — try again");
+    await new Promise((r) => setTimeout(r, 40 + Math.random() * 60));
+  }
+  try {
+    return await fn();
+  } finally {
+    // Release only our own lock; if it expired and someone else holds it, leave it.
+    if ((await redisCommand(["GET", LOCK_KEY])) === token) await redisCommand(["DEL", LOCK_KEY]);
+  }
+}
+
+/** The stored roster, or an error — never a silent empty list. */
+async function readRosterStrict(): Promise<Student[]> {
+  let raw: unknown;
+  if (usingRedis) {
+    raw = await redisCommand(["GET", ROSTER_KEY]);
+  } else {
+    assertLocal();
+    try {
+      raw = await fs.readFile(ROSTER_FILE, "utf8");
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw err;
+    }
+  }
+  if (!raw) return [];
+  const parsed = typeof raw === "string" ? JSON.parse(raw) : raw; // throws on corrupt data
+  if (!parsed || !Array.isArray(parsed.students)) throw new Error("Stored roster is unreadable");
+  return cleanRoster(parsed.students);
+}
+
+/** Read the stored roster, change it, write it back — server-side and one at a
+ *  time. `change` may return null to write nothing (e.g. student not found). */
+export async function updateRoster(
+  change: (students: Student[]) => Student[] | null
+): Promise<Roster> {
+  const run = () =>
+    withRedisLock(async () => {
+      const current = await readRosterStrict();
+      const next = change(current);
+      if (next === null) return { students: current, updatedAt: null } as Roster;
+      return putRoster(next);
+    });
+  const result = queue.then(run, run);
+  queue = result.catch(() => undefined);
+  return result;
 }
 
 function parseRoster(raw: unknown): Roster {

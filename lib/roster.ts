@@ -3,6 +3,7 @@
 // Adit edits it, Dr. Marish opens the same URL and sees the same rows. It lives
 // in Redis under one key, next to the daily ticks.
 
+import { cleanProgress, type Progress } from "./progress";
 import { cleanTz } from "./timezones";
 
 export const STATUSES = [
@@ -155,6 +156,8 @@ export type Student = {
   payment: Payment;
   remaining: number;
   notes: string;
+  /** Systems finished and NBME scores — see lib/progress.ts. */
+  progress: Progress;
 };
 
 export type Roster = { students: Student[]; updatedAt: string | null };
@@ -225,6 +228,7 @@ export function cleanStudent(raw: unknown, index: number): Student | null {
     payment,
     remaining: cleanMoney(r.remaining),
     notes: typeof r.notes === "string" ? r.notes.slice(0, 2000) : "",
+    progress: cleanProgress(r.progress),
   };
 }
 
@@ -255,6 +259,7 @@ export function blankStudent(): Student {
     payment: "Pending",
     remaining: 0,
     notes: "",
+    progress: { sys: {}, nbme: {} },
   };
 }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getRoster, putRoster, usingRedis } from "@/lib/store";
+import { getRoster, updateRoster, usingRedis } from "@/lib/store";
 import { cleanRoster } from "@/lib/roster";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +33,27 @@ export async function POST(req: Request) {
   }
 
   try {
-    const saved = await putRoster(cleanRoster(body.students));
+    // Progress is written only by /api/progress. Whatever a tab sends for it is
+    // ignored and the stored value kept — so a tab opened before progress
+    // existed, or one holding a stale copy, can never wipe a tick.
+    const incoming = cleanRoster(body.students);
+    let refused = false;
+    const saved = await updateRoster((stored) => {
+      // A tab whose load failed would send an empty list. Never let that wipe
+      // the roster — removing students happens one at a time, never all at once.
+      if (incoming.length === 0 && stored.length > 1) {
+        refused = true;
+        return null;
+      }
+      const kept = new Map(stored.map((s) => [s.id, s.progress]));
+      return incoming.map((s) => ({ ...s, progress: kept.get(s.id) ?? s.progress }));
+    });
+    if (refused) {
+      return NextResponse.json(
+        { error: "refused: that save would have removed every student" },
+        { status: 409 }
+      );
+    }
     return NextResponse.json(saved);
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

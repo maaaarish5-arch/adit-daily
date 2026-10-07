@@ -1925,13 +1925,215 @@ select.cell {
   border-color: var(--signal-deep);
 }
 
+/* ---------------- progress pills under the check-in note ----------------- */
+
+.checkin-row .note-col {
+  min-width: 0;
+}
+
+/* the page-wide .note (standing note) carries a 2.5rem bottom margin */
+.checkin-row .note-col .note {
+  margin: 0;
+  max-width: none;
+}
+
+.prog {
+  margin-top: 0.35rem;
+  padding: 0 0.5rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--bone-faint);
+}
+
+.prog-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.prog-head b {
+  color: var(--bone-dim);
+  font-weight: normal;
+}
+
+.prog-q {
+  width: 1.05rem;
+  height: 1.05rem;
+  padding: 0;
+  font: inherit;
+  font-size: 0.6rem;
+  line-height: 1;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--bone-dim);
+  border: 1px solid var(--rule-strong);
+  cursor: pointer;
+}
+
+.prog-q:hover,
+.prog-q[aria-expanded="true"] {
+  color: var(--ink);
+  background: var(--signal);
+  border-color: var(--signal);
+}
+
+.prog-help {
+  margin: 0 0 0.45rem;
+  max-width: 34rem;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--bone-dim);
+}
+
+.prog-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.prog .pill {
+  position: relative;
+  overflow: hidden;
+  font: inherit;
+  font-size: 0.6rem;
+  padding: 0.22rem 0.5rem;
+  background: transparent;
+  color: var(--bone-faint);
+  border: 1px solid var(--rule);
+  cursor: pointer;
+}
+
+.prog .pill:hover {
+  color: var(--bone);
+  border-color: var(--rule-strong);
+}
+
+.prog .pill .pill-txt {
+  position: relative;
+  display: inline-flex;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+
+.prog .pill em {
+  font-style: normal;
+}
+
+/* a finished system */
+.prog .pill[data-kind="sys"][data-on="true"] {
+  color: var(--ink);
+  background: var(--signal);
+  border-color: var(--signal);
+}
+
+/* NBME pills are wider: the bar inside is the score */
+.prog .pill[data-kind="nbme"] {
+  min-width: 6.2rem;
+  text-align: left;
+}
+
+.prog .pill .pill-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(192, 87, 59, 0.55);
+}
+
+.prog .pill[data-pass="true"] .pill-fill {
+  background: rgba(207, 232, 85, 0.45);
+}
+
+.prog .pill .pill-target {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed rgba(235, 230, 217, 0.35);
+}
+
+.prog .pill[data-kind="nbme"][data-on="true"] {
+  color: var(--bone);
+  border-color: var(--rule-strong);
+}
+
+.prog .pill[data-open="true"] {
+  outline: 1px solid var(--signal-deep);
+  outline-offset: 1px;
+}
+
+.prog-edit {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+  color: var(--bone-dim);
+}
+
+.prog-edit button {
+  font: inherit;
+  padding: 0.12rem 0.45rem;
+  background: transparent;
+  color: var(--bone-dim);
+  border: 1px solid var(--rule-strong);
+  cursor: pointer;
+}
+
+.prog-edit button:first-of-type:not(:disabled) {
+  color: var(--ink);
+  background: var(--signal);
+  border-color: var(--signal);
+}
+
+.prog-edit button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.prog-edit .prog-cancel {
+  border-color: transparent;
+}
+
+.prog-input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.prog-input input {
+  width: 3.6rem;
+  font: inherit;
+  padding: 0.12rem 0.3rem;
+  background: var(--ink-sink);
+  color: var(--bone);
+  border: 1px solid var(--rule-strong);
+  text-align: center;
+}
+
+.prog-input input:focus {
+  outline: none;
+  border-color: var(--signal-deep);
+}
+
+.prog-err {
+  color: var(--rust);
+}
+
 @media (max-width: 700px) {
   .checkin-row {
     grid-template-columns: 1.9rem minmax(0, 1fr);
   }
-  .checkin-row .note {
+  .checkin-row .note-col {
     grid-column: 2 / 3;
+  }
+  .checkin-row .note {
     border-color: var(--rule);
+  }
+  .prog {
+    padding: 0;
   }
 }
 
