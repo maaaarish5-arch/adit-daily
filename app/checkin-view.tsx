@@ -30,6 +30,7 @@ import {
   type Row,
 } from "@/lib/checkin";
 import { longDate, shiftDays, todayKey } from "@/lib/date";
+import HomeTime from "./home-time";
 
 type SyncState = "idle" | "saving" | "saved" | "error";
 
@@ -430,7 +431,10 @@ export default function CheckinView() {
                 </button>
 
                 <div className="who">
-                  <div className="nm">{r.name}</div>
+                  <div className="nm">
+                    {r.name}
+                    <HomeTime tz={r.tz} />
+                  </div>
                   <div className="meta">
                     {r.status === "Active" && !r.archived && (() => {
                       const p = currentPhase(r);

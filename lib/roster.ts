@@ -3,6 +3,8 @@
 // Adit edits it, Dr. Marish opens the same URL and sees the same rows. It lives
 // in Redis under one key, next to the daily ticks.
 
+import { cleanTz } from "./timezones";
+
 export const STATUSES = [
   "Active",
   "Paused",
@@ -142,6 +144,8 @@ export type Student = {
   dndFrom: string;
   /** YYYY-MM-DD the DND is over and they can be messaged again. Empty when none. */
   dndUntil: string;
+  /** Home time zone (IANA, from lib/timezones). Empty until set. */
+  tz: string;
   currency: Currency;
   /** The full fee agreed in the contract. */
   total: number;
@@ -212,6 +216,7 @@ export function cleanStudent(raw: unknown, index: number): Student | null {
     examDate: cleanDate(r.examDate),
     dndFrom: cleanDate(r.dndFrom),
     dndUntil: cleanDate(r.dndUntil),
+    tz: cleanTz(r.tz),
     currency: CURRENCIES.includes(r.currency as Currency)
       ? (r.currency as Currency)
       : "USD",
@@ -243,6 +248,7 @@ export function blankStudent(): Student {
     examDate: "",
     dndFrom: "",
     dndUntil: "",
+    tz: "",
     currency: "USD",
     total: 0,
     installments: [],

@@ -30,6 +30,8 @@ import {
   type Student,
 } from "@/lib/roster";
 import { shiftDays } from "@/lib/date";
+import { PLACES, placeLabel } from "@/lib/timezones";
+import HomeTime from "./home-time";
 
 type SyncState = "idle" | "saving" | "saved" | "error";
 
@@ -466,13 +468,33 @@ export default function RosterView() {
             return (
             <div key={s.id} className="student">
             <div className="grid-row" data-payment={sum.status} data-open={String(payOpen)}>
-              <input
-                className="cell name"
-                data-name-for={s.id}
-                value={s.name}
-                onChange={(e) => update(s.id, { name: e.target.value })}
-                placeholder="Student name"
-              />
+              <div className="name-cell">
+                <input
+                  className="cell name"
+                  data-name-for={s.id}
+                  value={s.name}
+                  onChange={(e) => update(s.id, { name: e.target.value })}
+                  placeholder="Student name"
+                />
+                <div className="home-line">
+                  <select
+                    className="tz-pick"
+                    data-set={String(Boolean(s.tz))}
+                    value={s.tz}
+                    onChange={(e) => update(s.id, { tz: e.target.value })}
+                    aria-label={`Home country for ${s.name || "student"}`}
+                    title="Where they live — shows their local time"
+                  >
+                    <option value="">+ Home country</option>
+                    {PLACES.map((p) => (
+                      <option key={p.tz} value={p.tz}>
+                        {placeLabel(p)} ({p.dial})
+                      </option>
+                    ))}
+                  </select>
+                  <HomeTime tz={s.tz} />
+                </div>
+              </div>
 
               <select
                 className="cell"

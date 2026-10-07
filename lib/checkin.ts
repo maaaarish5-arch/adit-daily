@@ -103,6 +103,7 @@ export function buildRows(students: Student[], entries: Entries, day: string): R
       examDate: "",
       dndFrom: "",
       dndUntil: "",
+      tz: "",
       currency: "USD" as const,
       total: 0,
       installments: [],

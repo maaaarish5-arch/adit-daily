@@ -1591,7 +1591,7 @@ select.cell {
     align-items: stretch;
   }
 
-  .grid-row .cell.name {
+  .grid-row .name-cell {
     grid-column: 1 / 3;
   }
 
@@ -3150,4 +3150,99 @@ select.cell {
   font-size: 0.55rem;
   letter-spacing: 0.14em;
   border-color: var(--prio, var(--rule-strong));
+}
+
+/* ------------------------------ home time ------------------------------- */
+/* A student's local clock beside their name. Dims late at night there. */
+
+.home-time {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  margin-left: 0.55rem;
+  padding: 0.1rem 0.4rem;
+  border: 1px solid var(--rule-strong);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--bone);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.home-time b {
+  font-weight: 400;
+  color: var(--signal);
+  letter-spacing: 0.1em;
+}
+
+.home-time i {
+  font-style: normal;
+  color: var(--bone-dim);
+}
+
+.home-time .vs {
+  color: var(--bone-faint);
+}
+
+.home-time[data-night="true"] {
+  border-color: var(--rule);
+  color: var(--bone-dim);
+}
+
+.home-time[data-night="true"] b {
+  color: var(--bone-dim);
+}
+
+.home-time[data-night="true"]::before {
+  content: "³E";
+  color: var(--bone-faint);
+}
+
+.name-cell {
+  min-width: 0;
+}
+
+.home-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.2rem 0;
+  padding: 0 0.5rem 0.1rem;
+}
+
+.home-line .home-time {
+  margin-left: 0.45rem;
+}
+
+.tz-pick {
+  appearance: none;
+  font: inherit;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  max-width: 9rem;
+  padding: 0.1rem 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed transparent;
+  color: var(--bone-faint);
+  cursor: pointer;
+  text-overflow: ellipsis;
+}
+
+.tz-pick[data-set="true"] {
+  color: var(--bone-dim);
+}
+
+.tz-pick:hover,
+.tz-pick:focus {
+  outline: none;
+  border-bottom-color: var(--signal-deep);
+  color: var(--bone);
+}
+
+.tz-pick option {
+  background: var(--ink-lift);
+  color: var(--bone);
 }
