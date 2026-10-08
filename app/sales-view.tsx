@@ -10,7 +10,6 @@ import {
   OUTCOMES,
   TAGS,
   effectiveOutcome,
-  istDate,
   shownEmail,
   shownName,
   shownWhatsapp,
@@ -27,8 +26,22 @@ type SyncInfo = { at: string; seen: number; error: string } | null;
 type State = "idle" | "saving" | "saved" | "error";
 type Period = "7" | "30" | "all";
 
+// Each viewer sees their own time zone — Dr. Marish in Dubai, Adit in India —
+// and calls are filed under the viewer's own day. IST is shown alongside when
+// it differs, so both can talk about the same slot.
+const LOCAL_TZ = typeof Intl !== "undefined" ? Intl.DateTimeFormat().resolvedOptions().timeZone : IST;
+const SAME_AS_IST = new Date().toLocaleString("en-US", { timeZone: LOCAL_TZ }) ===
+  new Date().toLocaleString("en-US", { timeZone: IST });
+
+const clock = (iso: string, tz: string) =>
+  new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(new Date(iso));
+
 const time = (iso: string) =>
-  new Intl.DateTimeFormat("en-IN", { timeZone: IST, hour: "numeric", minute: "2-digit" }).format(new Date(iso));
+  SAME_AS_IST ? clock(iso, IST).replace(/GMT\+5:30/, "IST") : `${clock(iso, LOCAL_TZ)} · ${clock(iso, IST).replace(/GMT\+5:30/, "IST")}`;
+
+/** YYYY-MM-DD of a call in the viewer's own time zone. */
+const localDay = (iso: string) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: LOCAL_TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(iso));
 
 const ago = (iso: string) => {
   const m = Math.round((Date.now() - Date.parse(iso)) / 60_000);
@@ -174,8 +187,8 @@ export default function SalesView() {
     const f = new FormData(form);
     const when = String(f.get("when") ?? "");
     if (!when) return;
-    // datetime-local is wall-clock time; read it as IST.
-    const start = new Date(`${when}:00+05:30`).toISOString();
+    // datetime-local is wall-clock time in the viewer's own zone.
+    const start = new Date(when).toISOString();
     setState("saving");
     const r = await fetch("/api/sales", {
       method: "POST",
@@ -187,7 +200,7 @@ export default function SalesView() {
     if (r.ok) {
       setState("saved");
       setAdding(false);
-      setDate(istDate(start));
+      setDate(localDay(start));
       load();
     } else setState("error");
   };
@@ -196,9 +209,9 @@ export default function SalesView() {
 
   const today = todayKey();
   const periodMeetings = useMemo(() => {
-    if (period === "all") return meetings.filter((m) => m.date <= today);
+    if (period === "all") return meetings.filter((m) => localDay(m.start) <= today);
     const from = shiftDays(today, -(Number(period) - 1));
-    return meetings.filter((m) => m.date >= from && m.date <= today);
+    return meetings.filter((m) => localDay(m.start) >= from && localDay(m.start) <= today);
   }, [meetings, period, today]);
   const stats = useMemo(() => statsOf(periodMeetings), [periodMeetings]);
 
@@ -213,10 +226,10 @@ export default function SalesView() {
         .slice(0, 60);
     }
     return meetings
-      .filter((m) => m.date === date && (showHidden || !m.notSales))
+      .filter((m) => localDay(m.start) === date && (showHidden || !m.notSales))
       .sort((a, b) => a.start.localeCompare(b.start));
   }, [meetings, q, date, showHidden]);
-  const hiddenToday = meetings.filter((m) => m.date === date && m.notSales).length;
+  const hiddenToday = meetings.filter((m) => localDay(m.start) === date && m.notSales).length;
 
   /* -------------------------------- render -------------------------------- */
 
@@ -350,7 +363,7 @@ export default function SalesView() {
           <input name="name" placeholder="First and last name" required />
           <input name="email" type="email" placeholder="Email" />
           <input name="whatsapp" placeholder="WhatsApp" />
-          <input name="when" type="datetime-local" required aria-label="Date and time (IST)" />
+          <input name="when" type="datetime-local" required aria-label="Date and time (your time zone)" />
           <button className="btn">Add</button>
         </form>
       )}
@@ -379,8 +392,8 @@ export default function SalesView() {
               <article className="sale" key={m.id} data-outcome={outcome || "none"} data-hidden={String(m.notSales)}>
                 <div className="sale-head">
                   <span className="sale-time">
-                    {q && <b>{longDate(m.date)} · </b>}
-                    {time(m.start)} IST
+                    {q && <b>{longDate(localDay(m.start))} · </b>}
+                    {time(m.start)}
                   </span>
                   {editing === m.id ? (
                     <form
