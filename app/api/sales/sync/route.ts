@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSalesSync, putSalesSync, syncMeetings } from "@/lib/store";
-import { meetingFromCal, type CalendarPart } from "@/lib/sales";
+import { meetingFromCal, meetingFromCalendly, type CalendarPart } from "@/lib/sales";
+import { readIcsFeed } from "@/lib/ics";
 import { cronAuthorized, salesAuthorized } from "@/lib/sales-auth";
 
 export const dynamic = "force-dynamic";
@@ -14,10 +15,22 @@ const AHEAD_DAYS = 60;
 /** A page open within this long of the last sync reuses it. */
 const FRESH_MS = 2 * 60_000;
 
+const ownEmails = () =>
+  (process.env.SALES_OWN_EMAILS ?? "marish@usmlevault.com").split(",").map((e) => e.trim());
+
+/** Calendly bookings still land in Google Calendar; its secret iCal feed is how the server sees them. */
+async function readGoogle(): Promise<CalendarPart[]> {
+  const url = process.env.GCAL_ICS_URL;
+  if (!url) return [];
+  const now = Date.now();
+  const events = await readIcsFeed(url, ownEmails(), now - BACK_DAYS * DAY, now + AHEAD_DAYS * DAY);
+  return events.map((e) => meetingFromCalendly(e)).filter((p): p is CalendarPart => Boolean(p));
+}
+
 async function readCal(): Promise<CalendarPart[]> {
   const key = process.env.CAL_API_KEY;
   if (!key) throw new Error("CAL_API_KEY is not set on Vercel");
-  const own = (process.env.SALES_OWN_EMAILS ?? "marish@usmlevault.com").split(",").map((e) => e.trim());
+  const own = ownEmails();
   const now = Date.now();
   const params = new URLSearchParams({
     afterStart: new Date(now - BACK_DAYS * DAY).toISOString(),
@@ -48,14 +61,22 @@ async function run(force: boolean) {
   if (!force && last && !last.error && Date.now() - Date.parse(last.at) < FRESH_MS) {
     return NextResponse.json({ sync: last, skipped: true });
   }
+  // Each source on its own: one failing never stops the other, and never
+  // touches a stored meeting. The page shows whichever failed.
+  const sources = await Promise.allSettled([readCal(), readGoogle()]);
+  const errors: string[] = [];
+  const parts: CalendarPart[] = [];
+  sources.forEach((r, i) => {
+    if (r.status === "fulfilled") parts.push(...r.value);
+    else errors.push(`${i === 0 ? "Cal.com" : "Google Calendar"}: ${String(r.reason).slice(0, 200)}`);
+  });
+  if (!process.env.GCAL_ICS_URL) errors.push("Google Calendar not connected — Calendly bookings won't arrive by themselves");
   try {
-    const parts = await readCal();
     const result = await syncMeetings(parts);
-    const sync = { at: new Date().toISOString(), seen: parts.length, error: "" };
+    const sync = { at: new Date().toISOString(), seen: parts.length, error: errors.join(" · ") };
     await putSalesSync(sync);
     return NextResponse.json({ sync, ...result });
   } catch (err) {
-    // Record the failure so the page can say so — but keep every stored meeting.
     const sync = { at: new Date().toISOString(), seen: 0, error: String(err).slice(0, 300) };
     await putSalesSync(sync).catch(() => undefined);
     return NextResponse.json({ sync }, { status: 502 });

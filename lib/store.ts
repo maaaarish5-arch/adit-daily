@@ -799,6 +799,16 @@ export async function addManualMeeting(m: Meeting): Promise<Meeting> {
  *  known ones, never touches what was tapped. */
 export async function syncMeetings(parts: CalendarPart[]): Promise<{ added: number; updated: number }> {
   return salesSerial(async () => {
+    // The same booking can arrive under a new id (an import via the API, then the
+    // iCal feed). Same start and same guest email = the same call: keep the old id.
+    const all = await salesAll();
+    const byKey = new Map(all.map((m) => [`${m.start}|${m.calEmail.toLowerCase()}`, m.id]));
+    const known = new Set(all.map((m) => m.id));
+    parts = parts.map((p) => {
+      if (known.has(p.id) || !p.calEmail) return p;
+      const same = byKey.get(`${p.start}|${p.calEmail.toLowerCase()}`);
+      return same ? { ...p, id: same } : p;
+    });
     const existing = new Map((await getMeetings(parts.map((p) => p.id))).map((m) => [m.id, m]));
     let added = 0;
     let updated = 0;
