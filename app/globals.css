@@ -3631,3 +3631,7 @@ select.cell {
 @media (max-width: 700px) {
   .sale-group + .sale-group { padding-left: 0; border-left: 0; }
 }
+
+.sale[data-hidden="true"] { opacity: 0.45; }
+.sale-notsales { margin-left: 0.8rem; letter-spacing: 0.08em; }
+.sales-count .sale-link { margin-left: 0.8rem; text-transform: none; letter-spacing: 0; }

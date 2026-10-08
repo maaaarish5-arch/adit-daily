@@ -60,6 +60,7 @@ export default function SalesView() {
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
   const noteTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   useEffect(() => {
@@ -211,8 +212,11 @@ export default function SalesView() {
         .sort((a, b) => b.start.localeCompare(a.start))
         .slice(0, 60);
     }
-    return meetings.filter((m) => m.date === date).sort((a, b) => a.start.localeCompare(b.start));
-  }, [meetings, q, date]);
+    return meetings
+      .filter((m) => m.date === date && (showHidden || !m.notSales))
+      .sort((a, b) => a.start.localeCompare(b.start));
+  }, [meetings, q, date, showHidden]);
+  const hiddenToday = meetings.filter((m) => m.date === date && m.notSales).length;
 
   /* -------------------------------- render -------------------------------- */
 
@@ -361,13 +365,18 @@ export default function SalesView() {
         <>
           <p className="sales-count">
             {q ? `${shown.length} match${shown.length === 1 ? "" : "es"}` : `${shown.length} call${shown.length === 1 ? "" : "s"}`}
+            {!q && hiddenToday > 0 && (
+              <button className="sale-link" onClick={() => setShowHidden((v) => !v)}>
+                {showHidden ? "hide" : "show"} {hiddenToday} marked not a sales call
+              </button>
+            )}
           </p>
           {shown.map((m) => {
             const outcome = effectiveOutcome(m);
             const wa = shownWhatsapp(m);
             const link = waLink(wa);
             return (
-              <article className="sale" key={m.id} data-outcome={outcome || "none"}>
+              <article className="sale" key={m.id} data-outcome={outcome || "none"} data-hidden={String(m.notSales)}>
                 <div className="sale-head">
                   <span className="sale-time">
                     {q && <b>{longDate(m.date)} · </b>}
@@ -408,10 +417,13 @@ export default function SalesView() {
                     </>
                   )}
                   <span className="sale-flags">
-                    {m.manual ? "added by hand" : m.id.startsWith("gcal:") ? "Calendly" : "Cal.com"}
+                    {m.manual ? "added by hand" : m.id.startsWith("gcal:") ? "Google Calendar" : "Cal.com"}
                     {m.calCancelled && " · cancelled in calendar"}
                     {m.calNoShow && " · marked absent in Cal"}
                     {m.gone && " · removed from calendar"}
+                    <button className="sale-link sale-notsales" onClick={() => save(m.id, { notSales: !m.notSales })}>
+                      {m.notSales ? "Restore as a sales call" : "Not a sales call"}
+                    </button>
                   </span>
                 </div>
 

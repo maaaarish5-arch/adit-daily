@@ -61,11 +61,13 @@ export type Meeting = {
   outcome: Outcome | "";
   tags: Tag[];
   note: string;
+  /** Tapped "Not a sales call" — kept, but out of the day list and the numbers. */
+  notSales: boolean;
   updatedAt: string;
 };
 
 /** The fields the page is allowed to change. */
-export const EDITABLE = ["name", "email", "whatsapp", "outcome", "tags", "note"] as const;
+export const EDITABLE = ["name", "email", "whatsapp", "outcome", "tags", "note", "notSales"] as const;
 export type Edit = Partial<Pick<Meeting, (typeof EDITABLE)[number]>>;
 
 const OUTCOME_IDS = new Set<string>(OUTCOMES.map((o) => o.id));
@@ -81,6 +83,7 @@ export function cleanEdit(raw: unknown): Edit {
   if ("whatsapp" in r) out.whatsapp = str(r.whatsapp, 40) ?? "";
   if ("note" in r) out.note = str(r.note, 4000) ?? "";
   if ("outcome" in r) out.outcome = OUTCOME_IDS.has(r.outcome as string) ? (r.outcome as Outcome) : "";
+  if ("notSales" in r) out.notSales = r.notSales === true;
   if ("tags" in r && Array.isArray(r.tags)) {
     out.tags = [...new Set(r.tags.filter((t) => TAG_IDS.has(t as string)))] as Tag[];
   }
@@ -113,6 +116,7 @@ export function cleanMeeting(raw: unknown): Meeting | null {
     outcome: e.outcome ?? "",
     tags: e.tags ?? [],
     note: e.note ?? "",
+    notSales: e.notSales ?? false,
     updatedAt: s(r.updatedAt),
   };
 }
@@ -266,6 +270,7 @@ export function mergeFromCalendar(stored: Meeting | null, cal: CalendarPart): Me
     outcome: "",
     tags: [],
     note: "",
+    notSales: false,
     updatedAt: "",
   };
   return { ...base, ...part, calNoShow, gone: false };
@@ -295,7 +300,7 @@ export type Stats = {
 };
 
 export function statsOf(meetings: Meeting[]): Stats {
-  const live = meetings.filter((m) => !m.gone);
+  const live = meetings.filter((m) => !m.gone && !m.notSales);
   const by = (o: Outcome) => live.filter((m) => effectiveOutcome(m) === o).length;
   const showed = by("showed");
   const noshow = by("noshow");
