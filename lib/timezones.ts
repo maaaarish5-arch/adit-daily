@@ -132,3 +132,38 @@ export function offsetLabel(min: number): string {
   const m = a % 60;
   return `IST ${sign}${h ? `${h}h` : ""}${h && m ? " " : ""}${m ? `${m}m` : ""}`;
 }
+
+/* ----------------------------- message order ------------------------------ */
+// Check-in lists each band in the order a day runs where the student is: whoever
+// is just up first, whoever it is 11 PM – 6 AM for last. No country set sits
+// between the two — they may well be awake.
+
+/** Their day starts at 6 AM and ends at 11 PM. */
+const DAY_START = 6 * 60;
+const NIGHT_START = 23 * 60;
+
+/** Minutes since midnight where they are. */
+function minuteOfDay(tz: string, at: Date): number {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    hourCycle: "h23",
+    hour: "numeric",
+    minute: "numeric",
+  }).formatToParts(at);
+  const n = (t: string) => Number(parts.find((x) => x.type === t)?.value);
+  return n("hour") * 60 + n("minute");
+}
+
+/** 11 PM – 6 AM where they are: leave the message for their morning. */
+export function lateNight(tz: string, at: Date): boolean {
+  if (!placeFor(tz)) return false;
+  const m = minuteOfDay(tz, at);
+  return m >= NIGHT_START || m < DAY_START;
+}
+
+/** Sort key, lowest first: 6 AM there → 10:59 PM there → no country set →
+ *  11 PM there → 5:59 AM there. */
+export function messageOrder(tz: string, at: Date): number {
+  if (!placeFor(tz)) return NIGHT_START - DAY_START + 0.5;
+  return (minuteOfDay(tz, at) - DAY_START + 1440) % 1440 + 1;
+}

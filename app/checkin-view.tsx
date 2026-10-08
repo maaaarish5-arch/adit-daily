@@ -30,7 +30,8 @@ import {
   type Row,
 } from "@/lib/checkin";
 import { longDate, shiftDays, todayKey } from "@/lib/date";
-import HomeTime from "./home-time";
+import HomeTime, { useNow } from "./home-time";
+import { lateNight } from "@/lib/timezones";
 import ProgressPills from "./progress-pills";
 import { pillsFor } from "@/lib/progress";
 
@@ -232,9 +233,12 @@ export default function CheckinView() {
 
   /* -------------------------------- derived -------------------------------- */
 
+  // Re-sorted as each minute turns, so whoever has just reached 6 AM moves to
+  // the top of their band and whoever has reached 11 PM drops to the bottom.
+  const now = useNow();
   const allRows = useMemo(
-    () => buildRows(students, entries, date ?? ""),
-    [students, entries, date]
+    () => buildRows(students, entries, date ?? "", now ?? undefined),
+    [students, entries, date, now]
   );
   // The day is about Active students only. Awaiting results, Completed, Paused,
   // Left and removed students stay out of the list, the bar and the copy —
@@ -300,6 +304,7 @@ export default function CheckinView() {
 
   const isToday = date === todayKey();
   let lastRank = -1;
+  let lastNight = false;
 
   return (
     <div className="checkin" ref={rootRef}>
@@ -437,11 +442,23 @@ export default function CheckinView() {
               </div>
             );
           }
+          if (band) lastNight = false;
           lastRank = rank;
+          // Inside a band, the students it is 11 PM – 6 AM for come last, under
+          // their own line.
+          const night = Boolean(now && lateNight(r.tz, now));
+          const nightLine =
+            night && !lastNight ? (
+              <div className="night-line">
+                Late night there — 11 PM to 6 AM, message in their morning
+              </div>
+            ) : null;
+          lastNight = night;
 
           return (
             <div key={r.id}>
               {band}
+              {nightLine}
               <div
                 className="checkin-row"
                 data-on={String(e.c)}

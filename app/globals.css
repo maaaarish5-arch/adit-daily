@@ -1815,6 +1815,17 @@ select.cell {
   color: var(--signal-deep);
 }
 
+/* inside a band: where the students it is late night for begin */
+.night-line {
+  margin: 0.9rem 0 0.2rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px dashed var(--rule);
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+}
+
 .checkin-row .phase-tag {
   display: inline-block;
   margin-right: 0.5rem;

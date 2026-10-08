@@ -12,6 +12,7 @@ import {
   type Phase,
   type Student,
 } from "./roster";
+import { messageOrder } from "./timezones";
 
 export type Entry = {
   /** Checked — an update was taken. */
@@ -54,7 +55,8 @@ export type Row = Student & { archived?: boolean; dnd?: boolean };
 /** Section order: Active students by phase priority (Phase 4 exam date set,
  *  then Phase 3 NBME, then Phase 1 new, then Phase 2 maintenance, then
  *  Match) → Do not disturb → Awaiting results → Completed → Paused → Left →
- *  Archived. Inside a section, newest join month first. */
+ *  Archived. Inside a section, by the time where the student is — 6 AM there
+ *  first, 11 PM – 6 AM there last (see messageOrder) — then newest join month. */
 const P = PHASE_PRIORITY.length;
 
 export function rankOf(s: Row): number {
@@ -88,8 +90,14 @@ export const BANDS: Record<number, { cls: string; label: string }> = {
   [P + 6]: { cls: "archived", label: "Archived — no longer on the tracker" },
 };
 
-/** Roster rows plus any orphaned entries from this day, in display order. */
-export function buildRows(students: Student[], entries: Entries, day: string): Row[] {
+/** Roster rows plus any orphaned entries from this day, in display order as
+ *  of `at`. */
+export function buildRows(
+  students: Student[],
+  entries: Entries,
+  day: string,
+  at: Date = new Date()
+): Row[] {
   const known = new Set(students.map((s) => s.id));
   const orphans: Row[] = Object.keys(entries)
     .filter((id) => !known.has(id))
@@ -119,10 +127,13 @@ export function buildRows(students: Student[], entries: Entries, day: string): R
     ...orphans,
   ];
   const order = new Map(all.map((r, i) => [r.id, i]));
-  const now = new Date().getMonth();
+  const now = at.getMonth();
+  const clock = new Map(all.map((r) => [r.id, messageOrder(r.tz, at)]));
   return all.sort((a, b) => {
     const r = rankOf(a) - rankOf(b);
     if (r !== 0) return r;
+    const t = clock.get(a.id)! - clock.get(b.id)!;
+    if (t !== 0) return t;
     const m = monthsAgo(b.month, now) - monthsAgo(a.month, now);
     if (m !== 0) return -m;
     // Same join month: whoever was added to the roster later joined later.

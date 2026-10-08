@@ -11,7 +11,7 @@ import { IST, homeClock, offsetLabel, placeFor, placeLabel } from "@/lib/timezon
  *  mounted, so the server render and the first client render agree. Browsers
  *  slow timers in background tabs, so it also catches up the moment the tab is
  *  looked at again. */
-function useNow(): Date | null {
+export function useNow(): Date | null {
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
