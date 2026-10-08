@@ -3459,3 +3459,175 @@ select.cell {
   background: var(--ink-lift);
   color: var(--bone);
 }
+
+/* ============================================================
+   Sales — every sales call, by day, with outcome buttons
+   ============================================================ */
+
+.sales .hint { max-width: 60ch; }
+
+.sales-lock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+.sales-lock p { width: 100%; margin: 0 0 0.3rem; color: var(--bone-dim); font-size: 0.8rem; }
+.sales-lock input,
+.sales-add input,
+.sale-edit input {
+  font: inherit;
+  font-size: 0.78rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--ink-sink);
+  color: var(--bone);
+  border: 1px solid var(--rule-strong);
+  min-width: 0;
+}
+.sales-lock input:focus,
+.sales-add input:focus,
+.sale-edit input:focus { outline: none; border-color: var(--signal-deep); }
+
+.sales-sync {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin: 0.6rem 0 1.2rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+}
+.sales-sync[data-error="true"] { color: var(--rust); }
+
+.sales-stats { margin-bottom: 1.4rem; }
+.sales-period { display: flex; gap: 0.25rem; margin-bottom: 0.6rem; }
+.sales-period button,
+.sale-group button {
+  font: inherit;
+  font-size: 0.62rem;
+  letter-spacing: 0.06em;
+  padding: 0.35rem 0.6rem;
+  background: transparent;
+  color: var(--bone-faint);
+  border: 1px solid var(--rule);
+  cursor: pointer;
+}
+.sales-period button:hover,
+.sale-group button:hover { color: var(--bone); border-color: var(--rule-strong); }
+.sales-period button[data-on="true"] { color: var(--ink); background: var(--bone-dim); border-color: var(--bone-dim); }
+
+.sales-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+  gap: 0.4rem;
+}
+.sales-tiles .tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--rule);
+  background: var(--ink-lift);
+}
+.sales-tiles .tile-label { font-size: 0.56rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--bone-faint); }
+.sales-tiles .tile-value { font-family: var(--font-display); font-size: 1.6rem; color: var(--signal); line-height: 1.1; }
+.sales-tiles .tile-sub { font-size: 0.6rem; color: var(--bone-faint); }
+
+.sales-add {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.sales-count {
+  font-size: 0.58rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  margin: 0.4rem 0 0.6rem;
+}
+
+.sale {
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--rule-strong);
+  padding: 0.8rem 0.9rem;
+  margin-bottom: 0.6rem;
+  background: rgba(235, 230, 217, 0.015);
+}
+.sale[data-outcome="showed"] { border-left-color: var(--signal); }
+.sale[data-outcome="noshow"] { border-left-color: var(--rust); }
+.sale[data-outcome="cancelled"] { border-left-color: var(--bone-faint); }
+
+.sale-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.8rem;
+  margin-bottom: 0.6rem;
+}
+.sale-time { font-size: 0.66rem; letter-spacing: 0.08em; color: var(--bone-dim); }
+.sale-time b { color: var(--bone); font-weight: normal; }
+.sale-name { font-size: 0.95rem; color: var(--bone); }
+.sale-contact { display: flex; flex-wrap: wrap; gap: 0.3rem 0.8rem; font-size: 0.7rem; }
+.sale-contact a { color: var(--bone-dim); overflow-wrap: anywhere; }
+.sale-contact a:hover { color: var(--signal); }
+.sale-link {
+  font: inherit;
+  font-size: 0.62rem;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--bone-faint);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.sale-flags { width: 100%; font-size: 0.56rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--bone-faint); }
+.sale-edit { display: flex; flex-wrap: wrap; gap: 0.35rem; width: 100%; }
+
+.sale-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.5rem; }
+.sale-group { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.sale-group + .sale-group { padding-left: 0.5rem; border-left: 1px solid var(--rule); }
+
+.sale-group button[data-on="true"] { color: var(--ink); background: var(--bone-dim); border-color: var(--bone-dim); }
+.sale-group button[data-kind="showed"][data-on="true"] { background: var(--signal); border-color: var(--signal); }
+.sale-group button[data-kind="noshow"][data-on="true"] { color: var(--bone); background: var(--rust); border-color: var(--rust); }
+.sale-group button[data-suggested="true"] { opacity: 0.7; border-style: dashed; }
+.sale-group[data-group="deal"] button[data-on="true"] { background: var(--signal); border-color: var(--signal); }
+
+.sale-note {
+  font: inherit;
+  font-size: 0.74rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--bone-dim);
+}
+.sale-note:focus { outline: none; background: var(--ink-sink); border-color: var(--signal-deep); color: var(--bone); }
+
+.sale-intake { margin-top: 0.5rem; }
+.sale-intake > button {
+  font: inherit;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--bone-faint);
+  cursor: pointer;
+}
+.sale-intake dl { margin: 0.5rem 0 0; display: grid; gap: 0.4rem; }
+.sale-intake dt { font-size: 0.62rem; color: var(--bone-faint); }
+.sale-intake dd { margin: 0.1rem 0 0; font-size: 0.74rem; color: var(--bone-dim); white-space: pre-line; }
+
+.sales-defs { margin-top: 1.4rem; font-size: 0.66rem; }
+
+@media (max-width: 700px) {
+  .sale-group + .sale-group { padding-left: 0; border-left: 0; }
+}

@@ -12,6 +12,13 @@ import path from "node:path";
 import type { DayKey } from "./date";
 import type { Ticks } from "./tasks";
 import { cleanRoster, EMPTY_ROSTER, type Roster, type Student } from "./roster";
+import {
+  cleanMeeting,
+  mergeFromCalendar,
+  type CalendarPart,
+  type Edit,
+  type Meeting,
+} from "./sales";
 import { cleanTodos, type Todo } from "./todos";
 import {
   cleanBuckets,
@@ -122,6 +129,12 @@ async function sandboxCommand(command: (string | number)[]): Promise<unknown> {
       sandbox.set(key, [...set]);
       return rest.length;
     }
+    case "SREM": {
+      const set = new Set((sandbox.get(key) as string[] | undefined) ?? []);
+      rest.forEach((v) => set.delete(v));
+      sandbox.set(key, [...set]);
+      return rest.length;
+    }
     case "SMEMBERS":
       return (sandbox.get(key) as string[] | undefined) ?? [];
     default:
@@ -226,11 +239,11 @@ const LOCK_KEY = "adit:roster:lock";
 const LOCK_MS = 5_000;
 let queue: Promise<unknown> = Promise.resolve();
 
-async function withRedisLock<T>(fn: () => Promise<T>): Promise<T> {
+async function withRedisLock<T>(fn: () => Promise<T>, lockKey = LOCK_KEY): Promise<T> {
   if (!usingRedis) return fn();
   const token = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const deadline = Date.now() + LOCK_MS;
-  while ((await redisCommand(["SET", LOCK_KEY, token, "NX", "PX", LOCK_MS])) !== "OK") {
+  while ((await redisCommand(["SET", lockKey, token, "NX", "PX", LOCK_MS])) !== "OK") {
     if (Date.now() > deadline) throw new Error("Roster is busy — try again");
     await new Promise((r) => setTimeout(r, 40 + Math.random() * 60));
   }
@@ -238,7 +251,7 @@ async function withRedisLock<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } finally {
     // Release only our own lock; if it expired and someone else holds it, leave it.
-    if ((await redisCommand(["GET", LOCK_KEY])) === token) await redisCommand(["DEL", LOCK_KEY]);
+    if ((await redisCommand(["GET", lockKey])) === token) await redisCommand(["DEL", lockKey]);
   }
 }
 
@@ -666,4 +679,169 @@ function parseDoc(raw: unknown): DayDoc {
   } catch {
     return EMPTY_DAY;
   }
+}
+
+/* ---------------------------------- sales ---------------------------------- */
+// One key per meeting (`adit:sales:m:<id>`), a set of ids per IST day
+// (`adit:sales:d:<date>`) and a set of every id (`adit:sales:all`). Small keys,
+// so months of calls never grow one document past Redis's request limit.
+// Every write goes through the sales lock, the same way the roster's do.
+
+const SALES_M = "adit:sales:m:";
+const SALES_D = "adit:sales:d:";
+const SALES_ALL = "adit:sales:all";
+const SALES_SYNC = "adit:sales:sync";
+const SALES_LOCK = "adit:sales:lock";
+const SALES_FILE = path.join(process.cwd(), ".data", "sales.json");
+
+type SalesFile = { meetings: Record<string, Meeting>; sync: SalesSync | null };
+export type SalesSync = { at: string; seen: number; error: string };
+
+let salesQueue: Promise<unknown> = Promise.resolve();
+
+function salesSerial<T>(fn: () => Promise<T>): Promise<T> {
+  const run = () => withRedisLock(fn, SALES_LOCK);
+  const result = salesQueue.then(run, run);
+  salesQueue = result.catch(() => undefined);
+  return result;
+}
+
+async function readSalesFile(): Promise<SalesFile> {
+  assertLocal();
+  try {
+    return JSON.parse(await fs.readFile(SALES_FILE, "utf8"));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return { meetings: {}, sync: null };
+    throw err;
+  }
+}
+
+async function writeSalesFile(f: SalesFile): Promise<void> {
+  assertLocal();
+  await fs.mkdir(path.dirname(SALES_FILE), { recursive: true });
+  await fs.writeFile(SALES_FILE, JSON.stringify(f, null, 2), "utf8");
+}
+
+async function getMeetings(ids: string[]): Promise<Meeting[]> {
+  if (!ids.length) return [];
+  if (!usingRedis) {
+    const f = await readSalesFile();
+    return ids.map((id) => f.meetings[id]).filter(Boolean).map((m) => cleanMeeting(m)!).filter(Boolean);
+  }
+  const out: Meeting[] = [];
+  for (let i = 0; i < ids.length; i += 200) {
+    const chunk = ids.slice(i, i + 200);
+    const raws = (await redisCommand(["MGET", ...chunk.map((id) => SALES_M + id)])) as (string | null)[];
+    for (const raw of raws ?? []) {
+      if (!raw) continue;
+      const m = cleanMeeting(typeof raw === "string" ? JSON.parse(raw) : raw);
+      if (m) out.push(m);
+    }
+  }
+  return out;
+}
+
+async function putMeeting(m: Meeting, previousDate?: string): Promise<void> {
+  if (!usingRedis) {
+    const f = await readSalesFile();
+    f.meetings[m.id] = m;
+    await writeSalesFile(f);
+    return;
+  }
+  await redisCommand(["SET", SALES_M + m.id, JSON.stringify(m)]);
+  await redisCommand(["SADD", SALES_D + m.date, m.id]);
+  await redisCommand(["SADD", SALES_ALL, m.id]);
+  if (previousDate && previousDate !== m.date) await redisCommand(["SREM", SALES_D + previousDate, m.id]);
+}
+
+const byStart = (a: Meeting, b: Meeting) => a.start.localeCompare(b.start);
+
+/** Every meeting filed under one IST day, earliest first. */
+export async function salesDay(date: string): Promise<Meeting[]> {
+  if (!usingRedis) {
+    const f = await readSalesFile();
+    return Object.values(f.meetings).map((m) => cleanMeeting(m)!).filter((m) => m && m.date === date).sort(byStart);
+  }
+  const ids = ((await redisCommand(["SMEMBERS", SALES_D + date])) as string[]) ?? [];
+  return (await getMeetings(ids)).filter((m) => m.date === date).sort(byStart);
+}
+
+/** Every meeting ever logged — for search and the numbers. */
+export async function salesAll(): Promise<Meeting[]> {
+  if (!usingRedis) {
+    const f = await readSalesFile();
+    return Object.values(f.meetings).map((m) => cleanMeeting(m)!).filter(Boolean).sort(byStart);
+  }
+  const ids = ((await redisCommand(["SMEMBERS", SALES_ALL])) as string[]) ?? [];
+  return (await getMeetings(ids)).sort(byStart);
+}
+
+/** Apply a page edit to one meeting. Only the editable fields can change. */
+export async function editMeeting(id: string, edit: Edit): Promise<Meeting | null> {
+  return salesSerial(async () => {
+    const [m] = await getMeetings([id]);
+    if (!m) return null;
+    const next = { ...m, ...edit, updatedAt: new Date().toISOString() };
+    await putMeeting(next);
+    return next;
+  });
+}
+
+/** Add a meeting by hand (someone who booked outside the calendar). */
+export async function addManualMeeting(m: Meeting): Promise<Meeting> {
+  return salesSerial(async () => {
+    await putMeeting(m);
+    return m;
+  });
+}
+
+/** Fold calendar reads in. Creates new meetings, refreshes the calendar half of
+ *  known ones, never touches what was tapped. */
+export async function syncMeetings(parts: CalendarPart[]): Promise<{ added: number; updated: number }> {
+  return salesSerial(async () => {
+    const existing = new Map((await getMeetings(parts.map((p) => p.id))).map((m) => [m.id, m]));
+    let added = 0;
+    let updated = 0;
+    if (!usingRedis) {
+      const f = await readSalesFile();
+      for (const p of parts) {
+        const before = existing.get(p.id) ?? null;
+        f.meetings[p.id] = mergeFromCalendar(before, p);
+        if (before) updated++;
+        else added++;
+      }
+      await writeSalesFile(f);
+      return { added, updated };
+    }
+    for (const p of parts) {
+      const before = existing.get(p.id) ?? null;
+      await putMeeting(mergeFromCalendar(before, p), before?.date);
+      if (before) updated++;
+      else added++;
+    }
+    return { added, updated };
+  });
+}
+
+export async function getSalesSync(): Promise<SalesSync | null> {
+  if (!usingRedis) return (await readSalesFile()).sync;
+  const raw = await redisCommand(["GET", SALES_SYNC]);
+  if (!raw) return null;
+  try {
+    return typeof raw === "string" ? JSON.parse(raw) : (raw as SalesSync);
+  } catch {
+    return null;
+  }
+}
+
+export async function putSalesSync(sync: SalesSync): Promise<void> {
+  if (!usingRedis) {
+    await salesSerial(async () => {
+      const f = await readSalesFile();
+      f.sync = sync;
+      await writeSalesFile(f);
+    });
+    return;
+  }
+  await redisCommand(["SET", SALES_SYNC, JSON.stringify(sync)]);
 }

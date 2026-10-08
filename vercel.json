@@ -2,9 +2,20 @@
   "redirects": [
     {
       "source": "/((?!api/).*)",
-      "has": [{ "type": "host", "value": "adit-daily.vercel.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "adit-daily.vercel.app"
+        }
+      ],
       "destination": "https://usmlevault-daily.vercel.app/$1",
       "permanent": false
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/sales/sync",
+      "schedule": "30 0 * * *"
     }
   ]
 }

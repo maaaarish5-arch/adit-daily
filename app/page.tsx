@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import RosterView from "./roster-view";
 import CheckinView from "./checkin-view";
+import SalesView from "./sales-view";
 import TodosView from "./todos-view";
 import CornerView from "./corner-view";
 import { Sop } from "./sop";
@@ -59,7 +60,7 @@ import {
 
 type MonthData = Record<string, { done: number; percent: number }>;
 type SyncState = "idle" | "saving" | "saved" | "error";
-type Tab = "today" | CornerId | "checkin" | "students" | "todo" | "sop";
+type Tab = "today" | CornerId | "checkin" | "students" | "sales" | "todo" | "sop";
 
 const PASSCODE_KEY = "adit-daily:passcode";
 
@@ -651,6 +652,9 @@ export default function Page() {
         >
           Students
         </button>
+        <button data-on={String(tab === "sales")} onClick={() => setTab("sales")}>
+          Sales
+        </button>
         <button data-on={String(tab === "todo")} onClick={() => setTab("todo")}>
           To-do
         </button>
@@ -677,6 +681,8 @@ export default function Page() {
         <CheckinView />
       ) : tab === "students" ? (
         <RosterView />
+      ) : tab === "sales" ? (
+        <SalesView />
       ) : tab === "sop" ? (
         /* ---------------------------- the manual ---------------------------- */
         <div className="manual">
