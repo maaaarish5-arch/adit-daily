@@ -13,7 +13,10 @@ import type { DayKey } from "./date";
 import type { Ticks } from "./tasks";
 import { cleanRoster, EMPTY_ROSTER, type Roster, type Student } from "./roster";
 import {
+  cleanLog,
   cleanMeeting,
+  EMPTY_LOG,
+  istDate,
   mergeFromCalendar,
   type CalendarPart,
   type Edit,
@@ -784,6 +787,78 @@ export async function editMeeting(id: string, edit: Edit): Promise<Meeting | nul
     const next = { ...m, ...edit, updatedAt: new Date().toISOString() };
     await putMeeting(next);
     return next;
+  });
+}
+
+/** One call as Claude's nightly sync reports it (Google Calendar + Meet transcript). */
+export type ClaudeEntry = {
+  eventId?: string;
+  start: string;
+  name?: string;
+  email?: string;
+  salesCall?: boolean;
+  status?: string;
+  summary?: string;
+  next?: string;
+  transcriptUrl?: string;
+  attendees?: string;
+};
+
+/** Fold Claude's log in. Matches an existing call (same id, or same start and
+ *  guest), else files a new one. Only the log half is written; taps are never touched. */
+export async function applyClaudeLog(entries: ClaudeEntry[]): Promise<{ matched: number; added: number }> {
+  return salesSerial(async () => {
+    const all = await salesAll();
+    const at = new Date().toISOString();
+    let matched = 0;
+    let added = 0;
+    for (const e of entries) {
+      const t = Date.parse(e.start);
+      if (!Number.isFinite(t)) continue;
+      const email = (e.email ?? "").trim().toLowerCase();
+      const name = (e.name ?? "").trim().toLowerCase();
+      const near = (m: Meeting) => Math.abs(Date.parse(m.start) - t) <= 30 * 60_000;
+      const sameGuest = (m: Meeting) =>
+        (email && [m.email, m.calEmail].some((x) => x.toLowerCase() === email)) ||
+        (name && [m.name, m.calName].some((x) => x && (x.toLowerCase().includes(name) || name.includes(x.toLowerCase()))));
+      const found =
+        (e.eventId && all.find((m) => m.id === e.eventId)) || all.find((m) => near(m) && sameGuest(m)) || null;
+      const log = cleanLog({ ...e, at });
+      if (found) {
+        const next = { ...found, log: { ...log, transcriptUrl: log.transcriptUrl || found.log.transcriptUrl } };
+        await putMeeting(next);
+        found.log = next.log;
+        matched++;
+        continue;
+      }
+      const start = new Date(t).toISOString();
+      const m: Meeting = {
+        id: (e.eventId || `claude-${start}-${email || name}`).slice(0, 200),
+        date: istDate(start),
+        start,
+        calName: (e.name ?? "").slice(0, 120),
+        calEmail: email.slice(0, 160),
+        calWhatsapp: "",
+        answers: [],
+        calCancelled: false,
+        calNoShow: false,
+        gone: false,
+        manual: false,
+        name: "",
+        email: "",
+        whatsapp: "",
+        outcome: "",
+        tags: [],
+        note: "",
+        notSales: e.salesCall === false,
+        updatedAt: at,
+        log: log ?? { ...EMPTY_LOG },
+      };
+      await putMeeting(m);
+      all.push(m);
+      added++;
+    }
+    return { matched, added };
   });
 }
 

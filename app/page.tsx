@@ -653,7 +653,7 @@ export default function Page() {
           Students
         </button>
         <button data-on={String(tab === "sales")} onClick={() => setTab("sales")}>
-          Sales
+          Sales Calendar
         </button>
         <button data-on={String(tab === "todo")} onClick={() => setTab("todo")}>
           To-do

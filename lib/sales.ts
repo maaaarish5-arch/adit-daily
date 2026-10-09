@@ -11,6 +11,7 @@ export const OUTCOMES = [
   { id: "showed", label: "Showed up" },
   { id: "noshow", label: "Didn't show" },
   { id: "cancelled", label: "Cancelled" },
+  { id: "postponed", label: "Postponed" },
 ] as const;
 export type Outcome = (typeof OUTCOMES)[number]["id"];
 
@@ -27,6 +28,33 @@ export const TAGS = [
   { id: "paid", label: "Paid", group: "deal" },
 ] as const;
 export type Tag = (typeof TAGS)[number]["id"];
+
+/** Claude's nightly log, from Google Calendar + the Meet transcript. Only /api/sales/claude writes it. */
+export type ClaudeLog = {
+  status: "held" | "noshow" | "postponed" | "";
+  summary: string;
+  next: string;
+  transcriptUrl: string;
+  attendees: string;
+  at: string;
+};
+export const EMPTY_LOG: ClaudeLog = { status: "", summary: "", next: "", transcriptUrl: "", attendees: "", at: "" };
+
+export function cleanLog(raw: unknown): ClaudeLog {
+  if (!raw || typeof raw !== "object") return { ...EMPTY_LOG };
+  const r = raw as Record<string, unknown>;
+  const s = (v: unknown, n: number) => (typeof v === "string" ? v.slice(0, n) : "");
+  const status = ["held", "noshow", "postponed"].includes(r.status as string) ? (r.status as ClaudeLog["status"]) : "";
+  const url = s(r.transcriptUrl, 500);
+  return {
+    status,
+    summary: s(r.summary, 2000),
+    next: s(r.next, 600),
+    transcriptUrl: /^https:\/\/(docs|drive)\.google\.com\//.test(url) ? url : "",
+    attendees: s(r.attendees, 300),
+    at: s(r.at, 40),
+  };
+}
 
 /** One intake answer from the Calendly form, as asked. */
 export type Answer = { q: string; a: string };
@@ -64,6 +92,9 @@ export type Meeting = {
   /** Tapped "Not a sales call" — kept, but out of the day list and the numbers. */
   notSales: boolean;
   updatedAt: string;
+
+  /* ---- from Claude's nightly sync (only /api/sales/claude writes it) ---- */
+  log: ClaudeLog;
 };
 
 /** The fields the page is allowed to change. */
@@ -118,6 +149,7 @@ export function cleanMeeting(raw: unknown): Meeting | null {
     note: e.note ?? "",
     notSales: e.notSales ?? false,
     updatedAt: s(r.updatedAt),
+    log: cleanLog(r.log),
   };
 }
 
@@ -128,7 +160,9 @@ export const shownWhatsapp = (m: Meeting) => m.whatsapp || m.calWhatsapp;
 
 /** The outcome: what was tapped, else what the calendar says (cancelled / absent). */
 export const effectiveOutcome = (m: Meeting): Outcome | "" =>
-  m.outcome || (m.calCancelled ? "cancelled" : m.calNoShow ? "noshow" : "");
+  m.outcome ||
+  (m.calCancelled ? "cancelled" : m.calNoShow ? "noshow" : "") ||
+  (m.log.status === "held" ? "showed" : m.log.status === "noshow" ? "noshow" : m.log.status === "postponed" ? "postponed" : "");
 
 /* ------------------------------ where they come from ------------------------------ */
 // Live: Cal.com bookings, pulled by /api/sales/sync (daily cron + every page open).
@@ -272,6 +306,7 @@ export function mergeFromCalendar(stored: Meeting | null, cal: CalendarPart): Me
     note: "",
     notSales: false,
     updatedAt: "",
+    log: { ...EMPTY_LOG },
   };
   return { ...base, ...part, calNoShow, gone: false };
 }

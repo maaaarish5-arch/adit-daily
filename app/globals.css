@@ -3635,3 +3635,15 @@ select.cell {
 .sale[data-hidden="true"] { opacity: 0.45; }
 .sale-notsales { margin-left: 0.8rem; letter-spacing: 0.08em; }
 .sales-count .sale-link { margin-left: 0.8rem; text-transform: none; letter-spacing: 0; }
+
+/* Claude's nightly log on a sales call */
+.sale-log { border: 1px solid var(--rule-strong); border-radius: 8px; padding: 10px 12px; margin-top: 8px; font-size: 0.82rem; color: var(--bone); }
+.sale-log p { margin: 6px 0 0; line-height: 1.5; }
+.sale-log-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sale-log-head a { margin-left: auto; color: var(--signal-deep); }
+.sale-log-pill { font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--rule-strong); }
+.sale-log-pill.held { border-color: #2e9e5b; color: #2e9e5b; }
+.sale-log-pill.noshow { border-color: #d9534f; color: #d9534f; }
+.sale-log-pill.postponed { border-color: #c98a1b; color: #c98a1b; }
+.sale-log-src { font-size: 0.68rem; color: var(--bone-dim); }
+.sale-log-who, .sale-log-next { color: var(--bone-dim); }

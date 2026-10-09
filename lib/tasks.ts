@@ -84,7 +84,7 @@ const SOCIAL_PILLS: Pill[] = [
 
 /* ------------------------------ shared scripts ---------------------------- */
 
-export const CALENDLY = "https://calendly.com/marish-usmlevault/30min";
+export const CALENDLY = "https://drmarishasudani.com/book";
 export const GUIDES = "https://vault-guides.vercel.app/";
 export const ONBOARDING_FORM = "https://usmlevault.com/onboarding";
 export const POST_BOOKING = "https://usmlevault.com/post-booking";
@@ -664,7 +664,7 @@ export const SECTIONS: Section[] = [
           },
           { kind: "script", title: "Meeting confirmation", body: MEETING_CONFIRM },
           { kind: "link", label: "Post-booking page", href: POST_BOOKING },
-          { kind: "link", label: "Calendly — 30 min with Dr. Asudani", href: CALENDLY },
+          { kind: "link", label: "Book a call with Dr. Asudani (drmarishasudani.com/book)", href: CALENDLY },
           {
             kind: "warn",
             text: "If the 24–36 hour window can't be met — Dr. Marish is travelling, the student is mid-exam — book the nearest slot you can and tell him the same day which student is outside the window and why. Never let it quietly slip.",
@@ -1108,7 +1108,7 @@ export const PLAYBOOKS: Playbook[] = [
       },
       {
         kind: "p",
-        text: "Route C — asking about Step 2 or Step 3: we are at peak capacity and have no places. Tell them so plainly, and send them the blog. There is a very detailed article there for both Step 2 and Step 3, and that article is the whole answer — do not qualify them, do not send the Calendly, do not put them into the mentorship workflow.",
+        text: "Route C — asking about Step 2 or Step 3: we are at peak capacity and have no places. Tell them so plainly, and send them the blog. There is a very detailed article there for both Step 2 and Step 3, and that article is the whole answer — do not qualify them, do not send the booking link, do not put them into the mentorship workflow.",
       },
       { kind: "link", label: "Resources doc — every NBME", href: RESOURCES_DOC },
       { kind: "link", label: "Guide — USMLE in first year", href: YEAR_1 },
@@ -1221,7 +1221,7 @@ export const PLAYBOOKS: Playbook[] = [
     blocks: [
       { kind: "link", label: "Onboarding form", href: ONBOARDING_FORM },
       { kind: "link", label: "Post-booking page", href: POST_BOOKING },
-      { kind: "link", label: "Calendly — 30 min with Dr. Asudani", href: CALENDLY },
+      { kind: "link", label: "Book a call with Dr. Asudani (drmarishasudani.com/book)", href: CALENDLY },
       { kind: "link", label: "Guides app", href: GUIDES },
       { kind: "link", label: "The blog — Step 2 and Step 3 articles", href: BLOG },
       { kind: "link", label: "Welcome video", href: WELCOME_VIDEO },

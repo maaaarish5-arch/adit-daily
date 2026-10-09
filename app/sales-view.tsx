@@ -239,7 +239,7 @@ export default function SalesView() {
     return (
       <div className="sales">
         <div className="roster-head">
-          <h2>Sales</h2>
+          <h2>Sales Calendar</h2>
         </div>
         <form
           className="sales-lock"
@@ -269,7 +269,7 @@ export default function SalesView() {
     <div className="sales">
       <div className="roster-head">
         <div>
-          <h2>Sales</h2>
+          <h2>Sales Calendar</h2>
           <p className="hint">
             Every sales call from the calendar, by day. Tap what happened after each call — the
             numbers below work themselves out.
@@ -483,6 +483,23 @@ export default function SalesView() {
                   placeholder="Note — what they said, what's next…"
                   aria-label={`Note for ${shownName(m)}`}
                 />
+
+                {(m.log.status || m.log.summary) && (
+                  <div className="sale-log">
+                    <div className="sale-log-head">
+                      <span className={`sale-log-pill ${m.log.status}`}>
+                        {m.log.status === "held" ? "Held" : m.log.status === "noshow" ? "Didn't join" : m.log.status === "postponed" ? "Postponed" : "Logged"}
+                      </span>
+                      <span className="sale-log-src">Claude, from the Meet transcript</span>
+                      {m.log.transcriptUrl && (
+                        <a href={m.log.transcriptUrl} target="_blank" rel="noreferrer">Transcript ↗</a>
+                      )}
+                    </div>
+                    {m.log.attendees && <p className="sale-log-who">On the call: {m.log.attendees}</p>}
+                    {m.log.summary && <p>{m.log.summary}</p>}
+                    {m.log.next && <p className="sale-log-next">Next: {m.log.next}</p>}
+                  </div>
+                )}
 
                 {m.answers.length > 0 && (
                   <div className="sale-intake">
