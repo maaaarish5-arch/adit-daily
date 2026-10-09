@@ -822,7 +822,7 @@ export async function applyClaudeLog(entries: ClaudeEntry[]): Promise<{ matched:
         (email && [m.email, m.calEmail].some((x) => x.toLowerCase() === email)) ||
         (name && [m.name, m.calName].some((x) => x && (x.toLowerCase().includes(name) || name.includes(x.toLowerCase()))));
       const found =
-        (e.eventId && all.find((m) => m.id === e.eventId)) || all.find((m) => near(m) && sameGuest(m)) || null;
+        (e.eventId && all.find((m) => m.id === e.eventId || m.id === `gcal:${e.eventId}`)) || all.find((m) => near(m) && sameGuest(m)) || null;
       const log = cleanLog({ ...e, at });
       if (found) {
         const next = { ...found, log: { ...log, transcriptUrl: log.transcriptUrl || found.log.transcriptUrl } };
