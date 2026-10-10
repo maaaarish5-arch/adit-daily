@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Progress is written only by /api/progress. Whatever a tab sends for it is
+    // Progress is written only by /api/progress, notes only by /api/memo. Whatever a tab sends for it is
     // ignored and the stored value kept — so a tab opened before progress
     // existed, or one holding a stale copy, can never wipe a tick.
     const incoming = cleanRoster(body.students);
@@ -45,8 +45,19 @@ export async function POST(req: Request) {
         refused = true;
         return null;
       }
-      const kept = new Map(stored.map((s) => [s.id, s.progress]));
-      return incoming.map((s) => ({ ...s, progress: kept.get(s.id) ?? s.progress }));
+      // Notes are written only by /api/memo, kept the same way.
+      const kept = new Map(
+        stored.map((s) => [
+          s.id,
+          {
+            progress: s.progress,
+            memo: s.memo,
+            memoEditedAt: s.memoEditedAt,
+            memoSeenAt: s.memoSeenAt,
+          },
+        ])
+      );
+      return incoming.map((s) => ({ ...s, ...kept.get(s.id) }));
     });
     if (refused) {
       return NextResponse.json(

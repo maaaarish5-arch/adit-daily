@@ -34,6 +34,8 @@ import HomeTime, { useNow } from "./home-time";
 import { lateNight } from "@/lib/timezones";
 import ProgressPills from "./progress-pills";
 import { pillsFor } from "@/lib/progress";
+import MemoBox from "./memo-box";
+import { MEMO_STALE_DAYS, memoStale } from "@/lib/memo";
 
 type SyncState = "idle" | "saving" | "saved" | "error";
 
@@ -56,6 +58,9 @@ export default function CheckinView() {
   const [dndOpen, setDndOpen] = useState<string | null>(null);
   /** What is typed in the picker's custom "__ days" box. */
   const [dndDays, setDndDays] = useState("");
+  /** The student whose Notes box is open, if any, and one folding away. */
+  const [memoOpen, setMemoOpen] = useState<string | null>(null);
+  const [memoClosing, setMemoClosing] = useState<string | null>(null);
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef(false);
@@ -208,6 +213,62 @@ export default function CheckinView() {
     },
     []
   );
+
+  // Notes have their own route that changes one student's notes on the server,
+  // like progress, so the whole roster is never sent.
+  const postMemo = useCallback(async (id: string, body: { text?: string; seen?: true }) => {
+    const r = await fetch("/api/memo", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-passcode": localStorage.getItem(PASSCODE_KEY) ?? "",
+      },
+      body: JSON.stringify({ id, ...body }),
+    });
+    const d = await r.json();
+    if (!r.ok || typeof d.memo !== "string") throw new Error(d.error ?? "save failed");
+    setStudents((list) =>
+      list.map((s) =>
+        s.id === id
+          ? { ...s, memo: d.memo, memoEditedAt: d.memoEditedAt, memoSeenAt: d.memoSeenAt }
+          : s
+      )
+    );
+  }, []);
+
+  const saveMemo = useCallback(
+    async (id: string, text: string) => {
+      setSync("saving");
+      try {
+        await postMemo(id, { text });
+        setSync("saved");
+        return true;
+      } catch {
+        setSync("error");
+        return false;
+      }
+    },
+    [postMemo]
+  );
+
+  // Folds away over 200ms; the box saves anything unsaved as it goes.
+  const closeMemo = () => {
+    const open = memoOpen;
+    if (!open) return;
+    setMemoOpen(null);
+    setMemoClosing(open);
+    setTimeout(() => setMemoClosing((c) => (c === open ? null : c)), 200);
+  };
+
+  // Opening the box clears the red dot — for everyone, since notes are shared.
+  const toggleMemo = (id: string) => {
+    if (memoOpen === id) return closeMemo();
+    setMemoClosing(null);
+    setMemoOpen(id);
+    const seen = new Date().toISOString();
+    setStudents((list) => list.map((s) => (s.id === id ? { ...s, memoSeenAt: seen } : s)));
+    postMemo(id, { seen: true }).catch(() => undefined);
+  };
 
   // Setting Phase 1 restarts its two-week clock from today.
   const changePhase = (id: string, p: Phase) =>
@@ -522,9 +583,9 @@ export default function CheckinView() {
                       <span className="flag"> · {r.status}</span>
                     ) : null}
                   </div>
-                  {r.status === "Active" && !r.archived && (
+                  {!r.archived && (
                     <div className="dnd" data-on={String(Boolean(r.dnd))}>
-                      {r.dnd ? (
+                      {r.status !== "Active" ? null : r.dnd ? (
                         <>
                           <span className="dnd-tag">DND</span>
                           <span>Don&rsquo;t message · back {longDay(r.dndUntil)}</span>
@@ -570,6 +631,29 @@ export default function CheckinView() {
                       ) : (
                         <button onClick={() => setDndOpen(r.id)}>DND</button>
                       )}
+                      {(() => {
+                        const stale = Boolean(now && memoStale(r, now));
+                        const has = Boolean(r.memo.trim());
+                        return (
+                          <button
+                            className="memo-btn"
+                            data-open={String(memoOpen === r.id)}
+                            data-has={String(has)}
+                            aria-expanded={memoOpen === r.id}
+                            onClick={() => toggleMemo(r.id)}
+                            title={
+                              stale
+                                ? `Notes not opened in ${MEMO_STALE_DAYS}+ days — check and clear them`
+                                : has
+                                  ? "Notes for this student"
+                                  : "Add a note for this student"
+                            }
+                          >
+                            Notes
+                            {stale && <i className="memo-dot" aria-label="unread for 3+ days" />}
+                          </button>
+                        );
+                      })()}
                     </div>
                   )}
                 </div>
@@ -594,6 +678,19 @@ export default function CheckinView() {
                     ) : null;
                   })()}
                 </div>
+
+                {(memoOpen === r.id || memoClosing === r.id) && (
+                  <MemoBox
+                    key={r.id}
+                    name={r.name}
+                    memo={r.memo}
+                    editedAt={r.memoEditedAt}
+                    progress={r.progress ?? { sys: {}, nbme: {} }}
+                    closing={memoClosing === r.id}
+                    onSave={(text) => saveMemo(r.id, text)}
+                    onAddScore={(kind, key, pct) => saveProgress(r.id, kind, key, pct)}
+                  />
+                )}
               </div>
             </div>
           );

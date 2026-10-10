@@ -1931,6 +1931,241 @@ select.cell {
   color: var(--bone-dim);
 }
 
+/* ---------------- Notes: a running scratchpad per student ---------------- */
+
+.checkin-row .dnd .memo-btn {
+  position: relative;
+}
+
+.checkin-row .dnd .memo-btn[data-has="true"] {
+  color: var(--bone-dim);
+}
+
+.checkin-row .dnd .memo-btn[data-open="true"] {
+  color: var(--signal);
+  border-color: var(--signal-deep);
+}
+
+/* unopened for 3+ days */
+.memo-dot {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #e5484d;
+  box-shadow: 0 0 0 2px var(--ink);
+  animation: memo-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes memo-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px var(--ink), 0 0 0 2px rgba(229, 72, 77, 0.45); }
+  50% { box-shadow: 0 0 0 2px var(--ink), 0 0 0 6px rgba(229, 72, 77, 0); }
+}
+
+/* the box spans the whole row and grows the row downward */
+.checkin-row .memo {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: memo-open 0.22s ease-out;
+}
+
+.checkin-row .memo[data-closing="true"] {
+  animation: memo-close 0.2s ease-in forwards;
+}
+
+@keyframes memo-open {
+  from { grid-template-rows: 0fr; opacity: 0; }
+  to { grid-template-rows: 1fr; opacity: 1; }
+}
+
+@keyframes memo-close {
+  from { grid-template-rows: 1fr; opacity: 1; }
+  to { grid-template-rows: 0fr; opacity: 0; }
+}
+
+.memo-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.memo-card {
+  display: flex;
+  flex-direction: column;
+  margin: 0.15rem 0 0.4rem 2.6rem;
+  background: var(--ink-lift);
+  border: 1px solid var(--rule-strong);
+  border-left: 2px solid var(--signal-deep);
+}
+
+.memo-text {
+  display: block;
+  width: 100%;
+  min-height: 9.5rem;
+  max-height: 26rem;
+  field-sizing: content;
+  resize: vertical;
+  padding: 0.9rem 1rem;
+  background: transparent;
+  color: var(--bone);
+  border: 0;
+  outline: none;
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1.7;
+}
+
+.memo-text::placeholder {
+  color: var(--bone-faint);
+}
+
+/* scores read out of the notes, waiting for one tap */
+.memo-found {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-top: 1px dashed var(--rule-strong);
+  background: rgba(207, 232, 85, 0.04);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+}
+
+.memo-found-head {
+  margin-right: 0.2rem;
+  color: var(--signal);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.memo-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.12rem 0.2rem 0.12rem 0.5rem;
+  color: var(--bone);
+  border: 1px solid var(--signal-deep);
+}
+
+.memo-chip s {
+  color: var(--bone-faint);
+}
+
+.memo-chip b {
+  color: var(--signal);
+  font-weight: 600;
+}
+
+.memo-chip button {
+  padding: 0 0.25rem;
+  font: inherit;
+  color: var(--bone-faint);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.memo-chip button:hover {
+  color: var(--bone);
+}
+
+.memo-add {
+  margin-left: auto;
+  padding: 0.25rem 0.7rem;
+  font: inherit;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  background: var(--signal);
+  border: 0;
+  cursor: pointer;
+}
+
+.memo-add:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.memo-added {
+  margin-left: auto;
+  color: var(--signal);
+}
+
+/* always at the bottom of the box: tools left, last edit right */
+.memo-foot {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem;
+  border-top: 1px solid var(--rule);
+  background: var(--ink-lift);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--bone-faint);
+}
+
+.memo-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.memo-tools button {
+  padding: 0.12rem 0.5rem;
+  font: inherit;
+  color: var(--bone-dim);
+  background: transparent;
+  border: 1px solid var(--rule);
+  cursor: pointer;
+}
+
+.memo-tools button:hover {
+  color: var(--bone);
+  border-color: var(--rule-strong);
+}
+
+.memo-tools button.quiet {
+  border-color: transparent;
+  color: var(--bone-faint);
+}
+
+.memo-tools button.danger {
+  color: var(--rust);
+  border-color: var(--rust);
+}
+
+.memo-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--bone-dim);
+}
+
+.memo-stamp[data-state="error"] {
+  color: var(--rust);
+}
+
+@media (max-width: 700px) {
+  .memo-card {
+    margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .checkin-row .memo,
+  .checkin-row .memo[data-closing="true"],
+  .memo-dot {
+    animation: none;
+  }
+}
+
 .btn.ghost[data-on="true"] {
   color: var(--signal);
   border-color: var(--signal-deep);

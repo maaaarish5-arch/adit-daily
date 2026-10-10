@@ -5,6 +5,7 @@
 
 import { cleanProgress, type Progress } from "./progress";
 import { cleanTz } from "./timezones";
+import { MEMO_MAX, cleanStamp } from "./memo";
 
 export const STATUSES = [
   "Active",
@@ -158,6 +159,12 @@ export type Student = {
   notes: string;
   /** Systems finished and NBME scores — see lib/progress.ts. */
   progress: Progress;
+  /** The Notes box on Check-in — see lib/memo.ts. Written only by /api/memo. */
+  memo: string;
+  /** ISO time the notes were last changed. Empty until then. */
+  memoEditedAt: string;
+  /** ISO time the Notes box was last opened. Clears the red dot. */
+  memoSeenAt: string;
 };
 
 export type Roster = { students: Student[]; updatedAt: string | null };
@@ -229,6 +236,9 @@ export function cleanStudent(raw: unknown, index: number): Student | null {
     remaining: cleanMoney(r.remaining),
     notes: typeof r.notes === "string" ? r.notes.slice(0, 2000) : "",
     progress: cleanProgress(r.progress),
+    memo: typeof r.memo === "string" ? r.memo.slice(0, MEMO_MAX) : "",
+    memoEditedAt: cleanStamp(r.memoEditedAt),
+    memoSeenAt: cleanStamp(r.memoSeenAt),
   };
 }
 
@@ -260,6 +270,9 @@ export function blankStudent(): Student {
     remaining: 0,
     notes: "",
     progress: { sys: {}, nbme: {} },
+    memo: "",
+    memoEditedAt: "",
+    memoSeenAt: "",
   };
 }
 

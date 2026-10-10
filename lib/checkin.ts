@@ -119,6 +119,9 @@ export function buildRows(
       remaining: 0,
       notes: "",
       progress: { sys: {}, nbme: {} },
+      memo: "",
+      memoEditedAt: "",
+      memoSeenAt: "",
       archived: true,
     }));
 
