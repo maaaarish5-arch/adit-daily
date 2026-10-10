@@ -3,7 +3,7 @@
 // The tappable pills under a student's note on Check-in.
 //   Phase 1 — Micro, Pharm, Renal, Respi
 //   Phase 2 — all 16 First Aid systems
-//   Phase 3 — NBME 26 to 33, each pill a bar filled to the score
+//   Phase 3 and 4 — NBME 26 to 33, each pill a bar filled to the score
 // Tapping one opens a small box asking for the % — a system is only marked
 // done once its average is in.
 

@@ -73,10 +73,11 @@ export function cleanProgress(raw: unknown): Progress {
   return out;
 }
 
-/** Which pills a phase shows: systems for Phase 1 and 2, NBMEs for Phase 3. */
+/** Which pills a phase shows: systems for Phase 1 and 2, NBMEs for Phase 3
+ *  and 4 (the exam week keeps the NBME scores in view). */
 export function pillsFor(phase: Phase): "p1" | "p2" | "nbme" | null {
   if (phase === 1) return "p1";
   if (phase === 2) return "p2";
-  if (phase === 3) return "nbme";
+  if (phase === 3 || phase === 4) return "nbme";
   return null;
 }
