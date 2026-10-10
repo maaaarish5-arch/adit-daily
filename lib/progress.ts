@@ -32,8 +32,8 @@ export type SystemId = (typeof SYSTEMS)[number]["id"];
 /** Phase 1 is the foundation: these four only. */
 export const P1_SYSTEMS: SystemId[] = ["micro", "pharm", "renal", "respi"];
 
-/** NBME forms 26 to 33. */
-export const NBMES = [26, 27, 28, 29, 30, 31, 32, 33] as const;
+/** NBME forms 26 to 34. */
+export const NBMES = [26, 27, 28, 29, 30, 31, 32, 33, 34] as const;
 
 /** The NBME line that matters — the bar marks it on every pill. */
 export const NBME_TARGET = 65;
