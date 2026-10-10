@@ -88,7 +88,7 @@ top — ink background, bone text, one lime signal colour. Match what is there.
 | `lib/memo.ts`, `app/memo-box.tsx` | The **Notes** box on Check-in (per student, red dot after 3 days unopened). Written only by `/api/memo`. |
 | `lib/trackers.ts` | **Student trackers**: the study plans sent to students. A plan (written by the `/checklist` skill through `/api/trackers`) plus ticks (written by the student through `/api/t/<token>`). |
 | `app/t/[token]/` | The student's tracker page — the link sent on WhatsApp. Light "paper" look in `app/t/tracker.css`, scoped under `.trk`. No passcode: the link is the key. |
-| `app/trackers-view.tsx` | Trackers tab: every tracker by student, progress, archive. Check-in's **Tracker** button opens each student's newest live one. |
+| `app/trackers-view.tsx` | Trackers tab: every tracker by student, progress, archive. On Check-in, a small ring beside a student's name opens their newest live one in a new tab, and it fills as they tick tasks. |
 
 Data lives in Upstash Redis, keyed `adit:*`. Credentials are environment
 variables on Vercel; they are deliberately **not** in this repo and you do not

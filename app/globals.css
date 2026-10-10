@@ -3897,21 +3897,35 @@ select.cell {
 /* ---------------- Trackers: student study plans (/t/<token>) -------------- */
 
 /* the button on Check-in, beside DND and Notes */
-.checkin-row .dnd .trk-btn {
-  padding: 0.12rem 0.45rem;
-  color: var(--bone-dim);
-  border: 1px solid var(--rule);
-  text-decoration: none;
+/* the tracker dot beside a name: a ring that fills as tasks are ticked */
+.trk-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin: -4px 0 -4px 0.3rem;
+  vertical-align: middle;
+  border-radius: 50%;
 }
 
-.checkin-row .dnd .trk-btn b {
-  font-weight: 500;
-  color: var(--signal);
+.trk-dot i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--signal);
+  background: conic-gradient(var(--signal) var(--p, 0%), transparent 0);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-.checkin-row .dnd .trk-btn:hover {
-  color: var(--bone);
-  border-color: var(--rule-strong);
+.trk-dot:hover i,
+.trk-dot:focus-visible i {
+  transform: scale(1.25);
+  box-shadow: 0 0 0 3px rgba(207, 232, 85, 0.18);
+}
+
+.trk-dot:focus-visible {
+  outline: none;
 }
 
 .trackers code {

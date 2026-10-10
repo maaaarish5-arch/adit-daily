@@ -567,6 +567,26 @@ export default function CheckinView() {
                 <div className="who">
                   <div className="nm">
                     {r.name}
+                    {(() => {
+                      // Their newest live tracker, opened in a new tab. The
+                      // ring fills as they tick tasks off.
+                      const t = trackers[r.id];
+                      if (!t) return null;
+                      const pct = t.total ? Math.round((t.done / t.total) * 100) : 0;
+                      return (
+                        <a
+                          className="trk-dot"
+                          href={`/t/${t.token}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ ["--p" as string]: `${pct}%` }}
+                          title={`${t.title} · ${t.done} of ${t.total} tasks done · opens their tracker`}
+                          aria-label={`Open ${r.name}'s tracker, ${t.done} of ${t.total} tasks done`}
+                        >
+                          <i />
+                        </a>
+                      );
+                    })()}
                     <HomeTime tz={r.tz} />
                   </div>
                   <div className="meta">
@@ -681,20 +701,6 @@ export default function CheckinView() {
                           </button>
                         );
                       })()}
-                      {trackers[r.id] && (
-                        <a
-                          className="trk-btn"
-                          href={`/t/${trackers[r.id].token}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          title={`${trackers[r.id].title} — opens the student's tracker`}
-                        >
-                          Tracker{" "}
-                          <b>
-                            {trackers[r.id].done}/{trackers[r.id].total}
-                          </b>
-                        </a>
-                      )}
                     </div>
                   )}
                 </div>
