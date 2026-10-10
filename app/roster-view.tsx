@@ -15,10 +15,12 @@ import {
   blankStudent,
   currentPhase,
   dueOn,
+  examDaysLeft,
   longDay,
   money,
   outstandingLabel,
   phase1DaysLeft,
+  phase4In,
   phaseName,
   summarise,
   today,
@@ -618,6 +620,10 @@ export default function RosterView() {
               {(() => {
                 const phase = currentPhase(s);
                 const left = phase1DaysLeft(s);
+                const toP4 = phase4In(s);
+                const exam = examDaysLeft(s);
+                // Stored as Phase 3, showing as Phase 4 because the exam is a week off.
+                const autoP4 = s.phase === 3 && phase === 4;
                 return (
                   <div className="cell phase-cell">
                   <div
@@ -627,7 +633,9 @@ export default function RosterView() {
                     title={
                       left !== null
                         ? `Phase 1 · ${PHASE_LABELS[1]} — moves to Phase 2 in ${left} day${left === 1 ? "" : "s"}`
-                        : phaseName(phase)
+                        : autoP4
+                          ? `${phaseName(4)} — moved here by itself, a week before the exam. Clear the exam date to keep them in Phase 3.`
+                          : phaseName(phase)
                     }
                   >
                     {PHASES.map((p: Phase) => (
@@ -638,7 +646,8 @@ export default function RosterView() {
                         data-phase={p}
                         data-on={String(phase === p)}
                         onClick={() =>
-                          phase !== p &&
+                          // Clicking P4 on an automatic P4 makes it stick.
+                          (phase !== p || (autoP4 && p === 4)) &&
                           // Setting Phase 1 restarts its two-week clock from today.
                           update(s.id, { phase: p, phaseSince: today() })
                         }
@@ -648,15 +657,30 @@ export default function RosterView() {
                     ))}
                     {left !== null && <i className="phase-left">{left}d</i>}
                   </div>
-                  {/* Phase 4 means the exam is booked, so it asks for the date. */}
-                  {phase === 4 && (
-                    <div className="exam-box" data-set={String(Boolean(s.examDate))}>
-                      <span>Exam date</span>
+                  {/* Phase 4 means the exam is booked, so it asks for the date.
+                      Phase 3 may have one too; a week before it, they move to 4. */}
+                  {(phase === 4 || phase === 3) && (
+                    <div
+                      className="exam-box"
+                      data-set={String(Boolean(s.examDate) || phase === 3)}
+                    >
+                      <span>Exam date{phase === 3 && !s.examDate ? " · optional" : ""}</span>
                       <DateField
                         value={s.examDate}
                         onCommit={(v) => update(s.id, { examDate: v })}
                         ariaLabel={`Exam date for ${s.name || "student"}`}
                       />
+                      {toP4 !== null && (
+                        <i className="exam-note">
+                          Moves to P4 {toP4 <= 0 ? "today" : `in ${toP4}d`}
+                        </i>
+                      )}
+                      {autoP4 && exam !== null && (
+                        <i className="exam-note">
+                          Moved to P4 by itself ·{" "}
+                          {exam > 0 ? `exam in ${exam}d` : exam === 0 ? "exam today" : "exam passed"}
+                        </i>
+                      )}
                     </div>
                   )}
                   </div>

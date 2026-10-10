@@ -52,6 +52,8 @@ export function monthsAgo(month: string, now: number): number {
 //   2 — Maintenance.
 //   3 — Exam coming up, sitting NBMEs: high priority.
 //   4 — Exam date set: the highest priority of all. Carries the date itself in `examDate`.
+//       A Phase 3 student can carry an exam date too; a week before it they
+//       read as Phase 4 on their own (or are moved by hand any time).
 //   5 — Match. Stored as 5 but always shown as "M", never "Phase 5".
 // Phase 1 lasts two weeks, then the student drops to Phase 2 on their own.
 // Students stored as 4 before 5 Oct 2026 were "E/M"; they now read as Phase 4.
@@ -92,11 +94,31 @@ function daysSince(iso: string): number {
   return Math.round((Date.UTC(ty, tm - 1, td) - Date.UTC(y, m - 1, d)) / 86_400_000);
 }
 
-/** The phase a student is actually in today. Phase 1 expires into Phase 2
- *  two weeks after it was set — derived, so nobody has to remember to move them. */
-export function currentPhase(s: Pick<Student, "phase" | "phaseSince">): Phase {
+/** A Phase 3 student with an exam date reads as Phase 4 from this many days out. */
+export const PHASE4_DAYS = 7;
+
+type PhaseFields = Pick<Student, "phase" | "phaseSince"> & { examDate?: string };
+
+/** The phase a student is actually in today — derived, so nobody has to
+ *  remember to move them:
+ *    Phase 1 expires into Phase 2 two weeks after it was set.
+ *    Phase 3 with an exam date becomes Phase 4 a week before the exam. */
+export function currentPhase(s: PhaseFields): Phase {
   if (s.phase === 1 && s.phaseSince && daysSince(s.phaseSince) >= PHASE1_DAYS) return 2;
+  if (s.phase === 3 && s.examDate && -daysSince(s.examDate) <= PHASE4_DAYS) return 4;
   return s.phase;
+}
+
+/** Days until the exam, or null with no date. Negative once it has passed. */
+export function examDaysLeft(s: { examDate?: string }): number | null {
+  return s.examDate ? -daysSince(s.examDate) : null;
+}
+
+/** Days before a Phase 3 student with an exam date moves to Phase 4 by
+ *  themselves, or null if that doesn't apply. */
+export function phase4In(s: PhaseFields): number | null {
+  if (currentPhase(s) !== 3 || !s.examDate) return null;
+  return -daysSince(s.examDate) - PHASE4_DAYS;
 }
 
 /** Days left before a Phase 1 student moves to Phase 2, or null if not in Phase 1. */

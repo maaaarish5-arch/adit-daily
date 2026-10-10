@@ -11,9 +11,11 @@ import {
   PHASE_PRIORITY,
   PHASE_TAGS,
   currentPhase,
+  examDaysLeft,
   longDay,
   nextCheckin,
   phase1DaysLeft,
+  phase4In,
   phaseName,
   today,
   type Phase,
@@ -593,12 +595,23 @@ export default function CheckinView() {
                     {r.status === "Active" && !r.archived && (() => {
                       const p = currentPhase(r);
                       const left = phase1DaysLeft(r);
+                      const toP4 = phase4In(r);
+                      const exam = examDaysLeft(r);
+                      const autoP4 = r.phase === 3 && p === 4;
                       return (
                         <span
                           className="phase-toggle phase-edit"
                           role="radiogroup"
                           aria-label={`Phase for ${r.name}`}
-                          title={`${phaseName(p)}${left !== null ? ` — moves to Phase 2 in ${left}d` : ""}`}
+                          title={`${phaseName(p)}${
+                            left !== null
+                              ? ` — moves to Phase 2 in ${left}d`
+                              : autoP4
+                                ? " — moved here by itself, a week before the exam"
+                                : toP4 !== null
+                                  ? ` — moves to Phase 4 in ${Math.max(toP4, 0)}d`
+                                  : ""
+                          }`}
                         >
                           {PHASES.map((x) => (
                             <button
@@ -607,7 +620,10 @@ export default function CheckinView() {
                               aria-checked={p === x}
                               data-phase={x}
                               data-on={String(p === x)}
-                              onClick={() => p !== x && changePhase(r.id, x)}
+                              // Clicking P4 on an automatic P4 makes it stick.
+                              onClick={() =>
+                                (p !== x || (autoP4 && x === 4)) && changePhase(r.id, x)
+                              }
                             >
                               {PHASE_TAGS[x]}
                             </button>
@@ -615,9 +631,15 @@ export default function CheckinView() {
                           <i className="phase-name">
                             {p === 4
                               ? r.examDate
-                                ? `Exam ${longDay(r.examDate)}`
+                                ? `Exam ${longDay(r.examDate)}${
+                                    exam !== null && exam >= 0
+                                      ? ` · ${exam === 0 ? "today" : `${exam}d`}`
+                                      : ""
+                                  }`
                                 : "Exam date not set"
-                              : PHASE_LABELS[p]}
+                              : p === 3 && r.examDate
+                                ? `${PHASE_LABELS[3]} · exam ${longDay(r.examDate)}`
+                                : PHASE_LABELS[p]}
                             {left !== null && ` · ${left}d left`}
                           </i>
                         </span>

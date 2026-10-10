@@ -1511,6 +1511,13 @@ select.cell {
   color: var(--rust);
 }
 
+.exam-box .exam-note {
+  font-style: normal;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  color: var(--signal);
+}
+
 .exam-box .dmy select {
   font-size: 0.66rem;
   padding: 0.3rem 0.1rem;
