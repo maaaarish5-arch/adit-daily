@@ -3882,3 +3882,174 @@ select.cell {
 .sale-log-pill.postponed { border-color: #c98a1b; color: #c98a1b; }
 .sale-log-src { font-size: 0.68rem; color: var(--bone-dim); }
 .sale-log-who, .sale-log-next { color: var(--bone-dim); }
+
+/* ---------------- Trackers: student study plans (/t/<token>) -------------- */
+
+/* the button on Check-in, beside DND and Notes */
+.checkin-row .dnd .trk-btn {
+  padding: 0.12rem 0.45rem;
+  color: var(--bone-dim);
+  border: 1px solid var(--rule);
+  text-decoration: none;
+}
+
+.checkin-row .dnd .trk-btn b {
+  font-weight: 500;
+  color: var(--signal);
+}
+
+.checkin-row .dnd .trk-btn:hover {
+  color: var(--bone);
+  border-color: var(--rule-strong);
+}
+
+.trackers code {
+  font-family: var(--font-mono);
+  color: var(--bone-dim);
+}
+
+/* one group per student */
+.tg {
+  margin-bottom: 1.6rem;
+}
+
+.tg-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--rule-strong);
+}
+
+.tg-name {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--bone);
+}
+
+.tg-head .flag {
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--rust);
+}
+
+.tg-count {
+  margin-left: auto;
+  font-size: 0.6rem;
+  letter-spacing: 0.08em;
+  color: var(--bone-faint);
+}
+
+/* one tracker */
+.tr {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(9rem, 1fr) auto;
+  gap: 0.6rem 1.2rem;
+  align-items: center;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.tr[data-archived="true"] {
+  opacity: 0.55;
+}
+
+.tr-title {
+  color: var(--bone);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.tr-title:hover {
+  color: var(--signal);
+}
+
+.tr-latest,
+.tr-arch {
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.4rem;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}
+
+.tr-latest {
+  color: var(--ink);
+  background: var(--signal);
+}
+
+.tr-arch {
+  color: var(--bone-faint);
+  border: 1px solid var(--rule-strong);
+}
+
+.tr-meta {
+  margin-top: 0.2rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  color: var(--bone-faint);
+}
+
+.tr-prog {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  font-size: 0.65rem;
+  color: var(--bone-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.tr-prog b {
+  font-weight: 500;
+  color: var(--bone);
+}
+
+.tr-bar {
+  flex: 1 1 100%;
+  height: 3px;
+  background: var(--rule-strong);
+}
+
+.tr-bar i {
+  display: block;
+  height: 100%;
+  background: var(--signal);
+  transition: width 0.3s ease;
+}
+
+.tr-last {
+  color: var(--bone-faint);
+}
+
+.tr-actions {
+  display: flex;
+  gap: 0.35rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+}
+
+.tr-actions a,
+.tr-actions button {
+  padding: 0.15rem 0.5rem;
+  font: inherit;
+  color: var(--bone-dim);
+  background: transparent;
+  border: 1px solid var(--rule);
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tr-actions a:hover,
+.tr-actions button:hover {
+  color: var(--bone);
+  border-color: var(--rule-strong);
+}
+
+@media (max-width: 700px) {
+  .tr {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

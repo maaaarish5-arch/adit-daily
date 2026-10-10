@@ -35,6 +35,14 @@ import {
   type CheckinDoc,
   type Entries,
 } from "./checkin";
+import {
+  cleanState,
+  cleanTracker,
+  summarise,
+  type Tracker,
+  type TrackerState,
+  type TrackerSummary,
+} from "./trackers";
 
 export type DayDoc = {
   ticks: Ticks;
@@ -929,4 +937,131 @@ export async function putSalesSync(sync: SalesSync): Promise<void> {
     return;
   }
   await redisCommand(["SET", SALES_SYNC, JSON.stringify(sync)]);
+}
+
+/* -------------------------------- trackers -------------------------------- */
+// Student trackers (lib/trackers.ts). The plan and its ticks are separate keys,
+// so a student's tick never rewrites the plan. Every write takes the trackers
+// lock, the same way the roster and sales do.
+
+const TRK_PLAN = "adit:trk:";
+const TRK_STATE = "adit:trk:s:";
+const TRK_ALL = "adit:trk:all";
+const TRK_LOCK = "adit:trk:lock";
+const TRK_FILE = path.join(process.cwd(), ".data", "trackers.json");
+
+type TrackersFile = { plans: Record<string, Tracker>; states: Record<string, TrackerState> };
+
+let trkQueue: Promise<unknown> = Promise.resolve();
+
+function trkSerial<T>(fn: () => Promise<T>): Promise<T> {
+  const run = () => withRedisLock(fn, TRK_LOCK);
+  const result = trkQueue.then(run, run);
+  trkQueue = result.catch(() => undefined);
+  return result;
+}
+
+async function readTrackersFile(): Promise<TrackersFile> {
+  assertLocal();
+  try {
+    return JSON.parse(await fs.readFile(TRK_FILE, "utf8"));
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return { plans: {}, states: {} };
+    throw err;
+  }
+}
+
+async function writeTrackersFile(f: TrackersFile): Promise<void> {
+  assertLocal();
+  await fs.mkdir(path.dirname(TRK_FILE), { recursive: true });
+  await fs.writeFile(TRK_FILE, JSON.stringify(f, null, 2), "utf8");
+}
+
+const parseJson = (raw: unknown) => (typeof raw === "string" ? JSON.parse(raw) : raw);
+
+/** One tracker's plan and ticks, or null if the link is unknown. */
+export async function getTracker(
+  token: string
+): Promise<{ tracker: Tracker; state: TrackerState } | null> {
+  if (!usingRedis) {
+    const f = await readTrackersFile();
+    const tracker = cleanTracker(f.plans[token]);
+    return tracker ? { tracker, state: cleanState(f.states[token]) } : null;
+  }
+  const [plan, state] = (await redisCommand(["MGET", TRK_PLAN + token, TRK_STATE + token])) as (
+    | string
+    | null
+  )[];
+  const tracker = cleanTracker(parseJson(plan));
+  return tracker ? { tracker, state: cleanState(parseJson(state)) } : null;
+}
+
+/** Every tracker, newest first, with its progress. */
+export async function trackerSummaries(): Promise<TrackerSummary[]> {
+  const out: TrackerSummary[] = [];
+  if (!usingRedis) {
+    const f = await readTrackersFile();
+    for (const [token, plan] of Object.entries(f.plans)) {
+      const t = cleanTracker(plan);
+      if (t) out.push(summarise(t, cleanState(f.states[token])));
+    }
+  } else {
+    const tokens = ((await redisCommand(["SMEMBERS", TRK_ALL])) as string[]) ?? [];
+    for (let i = 0; i < tokens.length; i += 100) {
+      const chunk = tokens.slice(i, i + 100);
+      const keys = chunk.flatMap((t) => [TRK_PLAN + t, TRK_STATE + t]);
+      const raws = ((await redisCommand(["MGET", ...keys])) as (string | null)[]) ?? [];
+      chunk.forEach((_, j) => {
+        const t = cleanTracker(parseJson(raws[j * 2]));
+        if (t) out.push(summarise(t, cleanState(parseJson(raws[j * 2 + 1]))));
+      });
+    }
+  }
+  return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** Save a whole plan — a new tracker, or the skill re-publishing one. Ticks are
+ *  untouched; ticks on tasks that no longer exist are simply not counted. */
+export async function putTrackerPlan(t: Tracker): Promise<void> {
+  return trkSerial(async () => {
+    if (!usingRedis) {
+      const f = await readTrackersFile();
+      f.plans[t.token] = t;
+      await writeTrackersFile(f);
+      return;
+    }
+    await redisCommand(["SET", TRK_PLAN + t.token, JSON.stringify(t)]);
+    await redisCommand(["SADD", TRK_ALL, t.token]);
+  });
+}
+
+/** Change one tracker's ticks. `change` gets the plan and current ticks and
+ *  returns the new ticks, or null to write nothing. */
+export async function updateTrackerState(
+  token: string,
+  change: (tracker: Tracker, state: TrackerState) => TrackerState | null
+): Promise<TrackerState | null> {
+  return trkSerial(async () => {
+    const found = await getTracker(token);
+    if (!found) return null;
+    const next = change(found.tracker, found.state);
+    if (!next) return found.state;
+    if (!usingRedis) {
+      const f = await readTrackersFile();
+      f.states[token] = next;
+      await writeTrackersFile(f);
+    } else {
+      await redisCommand(["SET", TRK_STATE + token, JSON.stringify(next)]);
+    }
+    return next;
+  });
+}
+
+/** Hide a tracker from Check-in and the Trackers list, or bring it back. The
+ *  link keeps working either way. */
+export async function setTrackerArchived(token: string, archived: boolean): Promise<boolean> {
+  const found = await getTracker(token);
+  if (!found) return false;
+  await putTrackerPlan({ ...found.tracker, archived });
+  return true;
 }

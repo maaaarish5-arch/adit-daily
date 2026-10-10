@@ -1,0 +1,986 @@
+/* ============================================================
+   Student tracker (/t/<token>) — design A, "today first".
+   Laptop first: a sticky header, a sidebar of every day, today's
+   card, then one card per system. Folds to one column on phones,
+   where the sidebar becomes a strip of day chips.
+   Everything is under .trk so none of it reaches the dashboard.
+   ============================================================ */
+
+body:has(.trk) {
+  background: #f3f5f6;
+  background-image: none;
+}
+
+body:has(.trk) .grain {
+  display: none;
+}
+
+.trk {
+  --bg: #f3f5f6;
+  --card: #ffffff;
+  --ink: #0f1a1c;
+  --muted: #5f6b6e;
+  --faint: #93a0a3;
+  --line: #e1e6e7;
+  --accent: #0f6b62;
+  --accent-soft: #e4f1ee;
+  --accent-line: #bcd9d3;
+  --warm: #fff6ea;
+  --warm-ink: #7c3d0b;
+  --late: #e8a453;
+  --bad: #b91c1c;
+
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-trk), "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+
+.trk *,
+.trk *::before,
+.trk *::after {
+  box-sizing: border-box;
+}
+
+.trk button {
+  font: inherit;
+  color: inherit;
+}
+
+.trk :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------- header ---------------------------------- */
+
+.trk-head {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 24px;
+  padding: 18px max(32px, calc((100vw - 1240px) / 2));
+  background: rgba(243, 245, 246, 0.94);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+
+.trk-head-text {
+  min-width: 0;
+  flex: 1 1 320px;
+}
+
+.trk-who {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.trk h1 {
+  margin: 2px 0 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.trk-stats {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: none;
+}
+
+.trk-stat {
+  text-align: right;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.trk-stat b {
+  display: block;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.trk-ring {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  flex: none;
+}
+
+.trk-ring svg {
+  transform: rotate(-90deg);
+}
+
+.trk-ring circle {
+  fill: none;
+  stroke-width: 5.5;
+}
+
+.trk-ring .bg {
+  stroke: var(--line);
+}
+
+.trk-ring .fg {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.35s ease;
+}
+
+.trk-ring span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* the phone's stand-in for the sidebar */
+.trk-strip {
+  display: none;
+}
+
+/* ---------------------------------- layout ---------------------------------- */
+
+.trk-grid {
+  display: grid;
+  grid-template-columns: 272px minmax(0, 1fr);
+  gap: 28px;
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 26px 32px 64px;
+  align-items: start;
+}
+
+.trk-side {
+  position: sticky;
+  top: 112px;
+  display: grid;
+  gap: 14px;
+  max-height: calc(100vh - 130px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.trk-daylist,
+.trk-ref {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 8px;
+}
+
+.trk-daylist h3,
+.trk-ref h3 {
+  margin: 6px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.trk-sysname {
+  margin: 10px 8px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.trk-drow {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trk-drow:hover {
+  background: var(--bg);
+}
+
+.trk-drow .dt {
+  display: grid;
+  justify-items: center;
+  line-height: 1.1;
+}
+
+.trk-drow .dt small {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.trk-drow .dt b {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.trk-drow .nm {
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trk-drow .nm span {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trk-drow .st {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.trk-drow[data-today="true"] {
+  background: var(--accent);
+  color: #fff;
+}
+
+.trk-drow[data-today="true"] .dt small,
+.trk-drow[data-today="true"] .nm span,
+.trk-drow[data-today="true"] .st {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* a day that has passed with work still open */
+.trk-drow[data-late="true"] {
+  box-shadow: inset 3px 0 0 var(--late);
+}
+
+.trk-ref {
+  padding-bottom: 10px;
+}
+
+.trk-ref div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 8px;
+  font-size: 12.5px;
+  border-top: 1px solid var(--line);
+}
+
+.trk-ref h3 + div {
+  border-top: 0;
+}
+
+.trk-ref span {
+  color: var(--muted);
+  text-align: right;
+}
+
+.trk-main {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+
+/* ---------------------------------- today ----------------------------------- */
+
+.trk-today {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 22px 24px 12px;
+  box-shadow: 0 18px 34px -26px rgba(15, 26, 28, 0.4);
+}
+
+.trk-today-top {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px 12px;
+}
+
+.trk-today-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.trk-today-tag::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.trk-today h2 {
+  margin: 6px 0 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.trk-today-sub {
+  font-size: 13.5px;
+  color: var(--muted);
+}
+
+/* --------------------------------- systems ---------------------------------- */
+
+.trk-sys {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.trk-sys-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 8px 24px;
+  align-items: flex-end;
+  padding: 18px 24px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.trk-sys-head h2 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.trk-dates {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.trk-sys-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.trk-sys-meta b {
+  color: var(--accent);
+}
+
+.trk-bar {
+  height: 7px;
+  border-radius: 7px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.trk-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 7px;
+  background: var(--accent);
+  transition: width 0.35s ease;
+}
+
+.trk-day {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: 20px;
+  padding: 16px 24px 8px;
+  border-top: 1px solid var(--line);
+  scroll-margin-top: 112px;
+}
+
+.trk-sys-head + .trk-day {
+  border-top: 0;
+}
+
+.trk-day[data-today="true"] {
+  background: var(--accent-soft);
+}
+
+.trk-day-h {
+  padding-top: 2px;
+}
+
+.trk-day-h span {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.trk-day-h b {
+  display: block;
+  margin-top: 3px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.trk-day-h em {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--accent);
+  color: #fff;
+  font-style: normal;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.trk-day-body {
+  min-width: 0;
+}
+
+.trk-topic {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.trk-blk {
+  margin: 12px 0 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+/* ----------------------------------- tasks ---------------------------------- */
+
+.trk-task {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 4px 14px;
+  padding: 10px 0;
+  align-items: start;
+}
+
+.trk-tick {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 2px solid #c6d0d2;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+span.trk-tick {
+  cursor: default;
+}
+
+button.trk-tick:hover {
+  border-color: var(--accent);
+}
+
+/* a bigger tap target than the box itself */
+button.trk-tick::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.trk-tick svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: #fff;
+  stroke-width: 3;
+  opacity: 0;
+}
+
+.trk-tick[data-on="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.trk-tick[data-on="true"] svg {
+  opacity: 1;
+}
+
+.trk-tick[data-part="true"] {
+  border-color: var(--accent);
+  background: linear-gradient(to top, var(--accent-soft) 50%, #fff 50%);
+}
+
+.trk-tick.small {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+}
+
+.trk-tick.small svg {
+  width: 11px;
+  height: 11px;
+}
+
+.trk-tx {
+  min-width: 0;
+  padding-top: 2px;
+}
+
+.trk-tx strong {
+  display: block;
+  font-size: 15.5px;
+  font-weight: 600;
+}
+
+.trk-tx strong[data-click="true"] {
+  cursor: pointer;
+}
+
+.trk-task[data-done="true"] .trk-tx > strong {
+  color: var(--faint);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.trk-tx small {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ------------------------- "how much are you doing?" ------------------------ */
+
+.trk-setup {
+  display: grid;
+  gap: 10px;
+  max-width: 560px;
+  margin-top: 10px;
+  padding: 14px 16px;
+  border: 1.5px dashed var(--accent-line);
+  border-radius: 14px;
+  background: var(--accent-soft);
+}
+
+.trk-setup-q {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.trk-asks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+}
+
+.trk-ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.trk-ask input,
+.trk-score input {
+  width: 72px;
+  padding: 6px 8px;
+  border: 1.5px solid var(--accent-line);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.trk-ask input:focus,
+.trk-score input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.trk-setup-out {
+  min-height: 1.3em;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.trk-setup-out em,
+.trk-score em {
+  font-style: normal;
+  font-weight: 600;
+  color: var(--bad);
+}
+
+.trk-setup-warn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--warm);
+  color: var(--warm-ink);
+  font-size: 13px;
+}
+
+.trk-apply {
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--warm-ink);
+  color: #fff !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+}
+
+.trk-link {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: var(--accent) !important;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* pages, cards, videos: one question, a small amount, no tracking */
+.trk-setup[data-info="true"] {
+  position: relative;
+  max-width: 400px;
+  gap: 6px;
+  padding: 10px 44px 10px 14px;
+}
+
+/* closes the optional count */
+.trk-x {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted) !important;
+  font-size: 20px !important;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.trk-x:hover {
+  background: rgba(15, 107, 98, 0.12);
+  color: var(--ink) !important;
+}
+
+.trk-addcount {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 12.5px !important;
+  font-weight: 600;
+  color: var(--faint) !important;
+  cursor: pointer;
+}
+
+.trk-addcount:hover {
+  color: var(--accent) !important;
+}
+
+.trk-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.trk-amount b {
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* the blocks a UWorld / NBME task was split into */
+.trk-units {
+  max-width: 560px;
+  margin-top: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fbfcfc;
+  overflow: hidden;
+}
+
+.trk-units-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.trk-units-head b {
+  color: var(--accent);
+}
+
+.trk-unit {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 7px 14px;
+  border-top: 1px solid var(--line);
+}
+
+.trk-units-head + .trk-unit {
+  border-top: 0;
+}
+
+.trk-unit-label {
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.trk-unit[data-done="true"] .trk-unit-label {
+  color: var(--faint);
+  text-decoration: line-through;
+}
+
+/* ---------------------------------- scores ---------------------------------- */
+
+.trk-score {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.trk-score[data-compact="true"] {
+  margin: 0;
+  padding: 3px 6px 3px 10px;
+  border-radius: 9px;
+}
+
+.trk-score[data-compact="true"] input {
+  width: 62px;
+  padding: 4px 6px;
+  font-size: 14px;
+}
+
+.trk-score em {
+  flex-basis: 100%;
+  white-space: normal;
+}
+
+.trk-callout {
+  margin: 8px 0 12px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: var(--warm);
+  color: var(--warm-ink);
+  font-size: 13.5px;
+}
+
+.trk-callout strong {
+  font-weight: 700;
+}
+
+.trk-foot {
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.trk-foot[data-state="error"] {
+  color: var(--bad);
+}
+
+/* ---------------------------------- phones ---------------------------------- */
+
+@media (max-width: 860px) {
+  .trk-head {
+    padding: 14px 16px 10px;
+    gap: 10px 12px;
+  }
+  .trk-head-text {
+    flex: 1 1 0;
+  }
+  .trk h1 {
+    font-size: 20px;
+  }
+  .trk-stat {
+    display: none;
+  }
+  .trk-ring {
+    width: 48px;
+    height: 48px;
+  }
+  .trk-ring svg {
+    width: 48px;
+    height: 48px;
+  }
+  .trk-strip {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    padding: 2px 0 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .trk-strip::-webkit-scrollbar {
+    display: none;
+  }
+  .trk-chip {
+    flex: none;
+    min-width: 46px;
+    padding: 6px 8px 7px;
+    display: grid;
+    justify-items: center;
+    gap: 1px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+    cursor: pointer;
+  }
+  .trk-chip small {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .trk-chip b {
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .trk-chip .trk-chip-label {
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .trk-chip[data-done="true"] {
+    border-color: var(--accent-line);
+  }
+  .trk-chip[data-today="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .trk-chip[data-today="true"] small {
+    color: rgba(255, 255, 255, 0.78);
+  }
+  .trk-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 14px 12px 40px;
+  }
+  .trk-side {
+    position: static;
+    order: 2;
+    max-height: none;
+    overflow: visible;
+  }
+  .trk-daylist {
+    display: none;
+  }
+  .trk-today {
+    padding: 16px 16px 8px;
+  }
+  .trk-today h2 {
+    font-size: 20px;
+  }
+  .trk-sys-head {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 14px 16px;
+  }
+  .trk-day {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 12px 16px 6px;
+    scroll-margin-top: 150px;
+  }
+  .trk-day-h {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 2px 8px;
+  }
+  .trk-day-h b,
+  .trk-day-h em {
+    margin-top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trk * {
+    transition: none !important;
+  }
+}

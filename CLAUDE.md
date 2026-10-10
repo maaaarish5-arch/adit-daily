@@ -84,11 +84,24 @@ top — ink background, bone text, one lime signal colour. Match what is there.
 | `app/corner-view.tsx` | One corner page. Days stored per person in Redis as `adit:corner:<person>:<date>` (`/api/corner`, `/api/corner/month`). |
 | `app/todos-view.tsx` | To-do tab. The old Checklist tab was retired into it on 5 Oct 2026 — its tasks were merged in once (as Adit's items, with priority) by `/api/todos`. `adit:dump` is kept untouched as a backup. |
 | `app/date-field.tsx` | Day/month/year dropdowns — read the comment before editing |
+| `lib/memo.ts`, `app/memo-box.tsx` | The **Notes** box on Check-in (per student, red dot after 3 days unopened). Written only by `/api/memo`. |
+| `lib/trackers.ts` | **Student trackers**: the study plans sent to students. A plan (written by the `/checklist` skill through `/api/trackers`) plus ticks (written by the student through `/api/t/<token>`). |
+| `app/t/[token]/` | The student's tracker page — the link sent on WhatsApp. Light "paper" look in `app/t/tracker.css`, scoped under `.trk`. No passcode: the link is the key. |
+| `app/trackers-view.tsx` | Trackers tab: every tracker by student, progress, archive. Check-in's **Tracker** button opens each student's newest live one. |
 
 Data lives in Upstash Redis, keyed `adit:*`. Credentials are environment
 variables on Vercel; they are deliberately **not** in this repo and you do not
 need them. Running locally with no credentials falls back to JSON files under
 `.data/`, so local work never touches live student data.
+
+## Student trackers
+
+New trackers are made with the **`/checklist` skill** (a personal Claude Code
+skill in `~/.claude/skills/checklist/`, not in this repo). It writes the plan as
+JSON and POSTs it to `/api/trackers` — never HTML. A score typed on a task tagged
+`score: {kind, key}` fills that progress pill: a system's pill holds its **UWorld
+average**, an NBME pill that form's score. There is deliberately **no reset**
+anywhere — progress is shared, so one tap would wipe it for everyone.
 
 ## Things that will bite you
 

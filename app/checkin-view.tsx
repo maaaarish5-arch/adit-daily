@@ -36,6 +36,7 @@ import ProgressPills from "./progress-pills";
 import { pillsFor } from "@/lib/progress";
 import MemoBox from "./memo-box";
 import { MEMO_STALE_DAYS, memoStale } from "@/lib/memo";
+import type { TrackerSummary } from "@/lib/trackers";
 
 type SyncState = "idle" | "saving" | "saved" | "error";
 
@@ -61,6 +62,8 @@ export default function CheckinView() {
   /** The student whose Notes box is open, if any, and one folding away. */
   const [memoOpen, setMemoOpen] = useState<string | null>(null);
   const [memoClosing, setMemoClosing] = useState<string | null>(null);
+  /** Each student's newest live tracker, for the Tracker button. */
+  const [trackers, setTrackers] = useState<Record<string, TrackerSummary>>({});
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef(false);
@@ -74,6 +77,18 @@ export default function CheckinView() {
     fetch("/api/roster", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => setStudents(d.students ?? []))
+      .catch(() => undefined);
+    // Newest first from the route, so the first live one per student wins.
+    fetch("/api/trackers", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!Array.isArray(d.trackers)) return;
+        const latest: Record<string, TrackerSummary> = {};
+        for (const t of d.trackers as TrackerSummary[]) {
+          if (!t.archived && !latest[t.studentId]) latest[t.studentId] = t;
+        }
+        setTrackers(latest);
+      })
       .catch(() => undefined);
   }, []);
 
@@ -654,6 +669,20 @@ export default function CheckinView() {
                           </button>
                         );
                       })()}
+                      {trackers[r.id] && (
+                        <a
+                          className="trk-btn"
+                          href={`/t/${trackers[r.id].token}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          title={`${trackers[r.id].title} — opens the student's tracker`}
+                        >
+                          Tracker{" "}
+                          <b>
+                            {trackers[r.id].done}/{trackers[r.id].total}
+                          </b>
+                        </a>
+                      )}
                     </div>
                   )}
                 </div>
