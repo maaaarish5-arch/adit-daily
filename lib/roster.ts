@@ -37,6 +37,15 @@ export const MONTHS = [
   "December",
 ] as const;
 
+/** How many months ago a join month was, assuming it falls in the last year.
+ *  The roster stores only the month name, so a month later than this one is
+ *  read as last year's — January 2027 sorts above December 2026. */
+export function monthsAgo(month: string, now: number): number {
+  const i = MONTHS.indexOf(month as (typeof MONTHS)[number]);
+  if (i < 0) return 12;
+  return (now - i + 12) % 12;
+}
+
 /* --------------------------------- phases --------------------------------- */
 // Where a student is in the programme, and so how hard they need watching.
 //   1 — New student: constant, high-priority attention.
@@ -112,6 +121,47 @@ export const DND_MAX_DAYS = 90;
  *  6th and is over on the 7th. */
 export function onDnd(s: Pick<Student, "dndFrom" | "dndUntil">, day: string): boolean {
   return Boolean(s.dndUntil) && Boolean(day) && s.dndFrom <= day && day < s.dndUntil;
+}
+
+/* ------------------------------ match rhythm ------------------------------ */
+// Match students give an update every other day, not daily. The first check-in
+// day is 11 Oct 2026 (the rule began on the 10th), or the day after they were
+// moved to Match if that is later; then every second day from there. On the
+// days between they owe no update, so Check-in leaves them out of the list, the
+// bar and the count. Days before their first check-in day keep the daily rule,
+// so past check-ins still read right.
+
+export const MATCH_EVERY = 2;
+export const MATCH_FROM = "2026-10-11";
+
+function dayNumber(iso: string): number {
+  const [y, m, d] = iso.split("-").map(Number);
+  return Date.UTC(y, m - 1, d) / 86_400_000;
+}
+
+function isoOf(n: number): string {
+  return new Date(n * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** The first every-other-day check-in for a Match student. */
+function matchStart(s: Pick<Student, "phaseSince">): number {
+  const from = dayNumber(MATCH_FROM);
+  return s.phaseSince ? Math.max(from, dayNumber(s.phaseSince) + 1) : from;
+}
+
+/** Is an update owed from this student on this day? Always yes, except a
+ *  Match student between their every-other-day check-ins. */
+export function checkinDue(s: Pick<Student, "phase" | "phaseSince">, day: string): boolean {
+  if (currentPhase(s) !== 5 || !day) return true;
+  const gap = dayNumber(day) - matchStart(s);
+  return gap < 0 || gap % MATCH_EVERY === 0;
+}
+
+/** The first day after `day` that this student is due. */
+export function nextCheckin(s: Pick<Student, "phase" | "phaseSince">, day: string): string {
+  let n = dayNumber(day) + 1;
+  while (!checkinDue(s, isoOf(n))) n++;
+  return isoOf(n);
 }
 
 export const CURRENCIES = ["USD", "INR"] as const;

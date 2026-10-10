@@ -3284,15 +3284,26 @@ select.cell {
 }
 
 .table-scroll > .grid-head,
-.table-scroll > .student {
+.table-scroll > .student,
+.table-scroll > .roster-band {
   min-width: 52rem;
 }
 
 @media (max-width: 860px) {
   .table-scroll > .grid-head,
-  .table-scroll > .student {
+  .table-scroll > .student,
+  .table-scroll > .roster-band {
     min-width: 0;
   }
+}
+
+/* Students tab: one heading per status in the status sort, and over Left in every sort. */
+.roster-band {
+  margin-top: 1.1rem;
+}
+.table-scroll > .roster-band:first-of-type,
+.grid-head + .roster-band {
+  margin-top: 0.6rem;
 }
 
 /* Close must sit beside Add instalment, not be pushed to the far edge. */

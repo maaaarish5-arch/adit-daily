@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import DateField from "./date-field";
 import {
   CURRENCIES,
@@ -30,12 +30,19 @@ import {
   type Student,
 } from "@/lib/roster";
 import { shiftDays } from "@/lib/date";
+import { SORTS, isSortKey, sortStudents, type SortKey } from "@/lib/roster-order";
 import { PLACES, placeLabel } from "@/lib/timezones";
 import HomeTime from "./home-time";
 
 type SyncState = "idle" | "saving" | "saved" | "error";
 
+/** "Awaiting results" → "awaiting": the class on a status heading. */
+function bandClass(status: Status): string {
+  return status.split(" ")[0].toLowerCase();
+}
+
 const PASSCODE_KEY = "adit-daily:passcode";
+const SORT_KEY = "adit-daily:roster-sort";
 
 export default function RosterView() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -48,6 +55,7 @@ export default function RosterView() {
   const [phaseFilter, setPhaseFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
   const [query, setQuery] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("status");
   const [openPay, setOpenPay] = useState<string | null>(null);
   /** The day the "due" tracker is looking at. Null until mounted - it comes
    *  from the device clock, so it cannot be rendered on the server. */
@@ -221,9 +229,49 @@ export default function RosterView() {
 
   /* --------------------------------- derived -------------------------------- */
 
+  // The sort is remembered on this device only.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SORT_KEY);
+      if (isSortKey(saved)) setSortKey(saved);
+    } catch {}
+  }, []);
+  const chooseSort = (key: SortKey) => {
+    setSortKey(key);
+    try {
+      localStorage.setItem(SORT_KEY, key);
+    } catch {}
+  };
+
+  // The order is worked out when the list loads or the sort changes, then
+  // held: editing a row (a new status, a payment) must not make it jump away
+  // mid-edit, and neither must the 15-second refresh. Rows added since go on
+  // top, where the new one is being typed into.
+  // Headings follow the status each row had at that moment too, so a student
+  // just marked Left stays under their old heading until the next sort.
+  type Order = { key: SortKey; ids: string[]; groups: Record<string, Status> };
+  const orderRef = useRef<Order>({ key: sortKey, ids: [], groups: {} });
+  const order = useMemo(() => {
+    const prev = orderRef.current;
+    let ids: string[];
+    let groups = prev.groups;
+    if (prev.key !== sortKey || prev.ids.length === 0) {
+      ids = sortStudents(students, sortKey);
+      groups = Object.fromEntries(students.map((s) => [s.id, s.status]));
+    } else {
+      const present = new Set(students.map((s) => s.id));
+      const kept = prev.ids.filter((id) => present.has(id));
+      const known = new Set(kept);
+      ids = [...students.filter((s) => !known.has(s.id)).map((s) => s.id), ...kept];
+    }
+    orderRef.current = { key: sortKey, ids, groups };
+    return orderRef.current;
+  }, [students, sortKey]);
+
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return students.filter((s) => {
+    const byId = new Map(students.map((s) => [s.id, s]));
+    return order.ids.map((id) => byId.get(id)!).filter((s) => {
       if (monthFilter !== "all" && s.month !== monthFilter) return false;
       if (statusFilter !== "all" && s.status !== statusFilter) return false;
       if (phaseFilter !== "all" && String(currentPhase(s)) !== phaseFilter) return false;
@@ -237,7 +285,7 @@ export default function RosterView() {
       if (q && !`${s.name} ${s.notes}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [students, monthFilter, statusFilter, phaseFilter, paymentFilter, query]);
+  }, [students, order, monthFilter, statusFilter, phaseFilter, paymentFilter, query]);
 
   const all = totals(students);
   const due = useMemo(
@@ -434,6 +482,19 @@ export default function RosterView() {
             <option key={p}>{p}</option>
           ))}
         </select>
+        <select
+          className="pay-filter"
+          data-on={String(sortKey !== "status")}
+          value={sortKey}
+          onChange={(e) => isSortKey(e.target.value) && chooseSort(e.target.value)}
+          aria-label="Sort the list"
+        >
+          {(Object.keys(SORTS) as SortKey[]).map((k) => (
+            <option key={k} value={k}>
+              Sort: {SORTS[k]}
+            </option>
+          ))}
+        </select>
         <button className="btn" onClick={addStudent}>
           + Add student
         </button>
@@ -462,11 +523,25 @@ export default function RosterView() {
             <span />
           </div>
 
-          {shown.map((s) => {
+          {shown.map((s, i) => {
             const sum = summarise(s);
             const payOpen = openPay === s.id;
+            // In the status sort, each status gets a heading with its count.
+            // Left always sits last, so it gets one in every sort.
+            const groupOf = (x: Student) => {
+              const g = order.groups[x.id] ?? x.status;
+              return sortKey === "status" || g === "Left" ? g : "";
+            };
+            const group = groupOf(s);
+            const heading = group && (i === 0 || groupOf(shown[i - 1]) !== group);
             return (
-            <div key={s.id} className="student">
+            <Fragment key={s.id}>
+            {heading && (
+              <div className={`band roster-band ${bandClass(group as Status)}`}>
+                {group} <b>{shown.filter((x) => groupOf(x) === group).length}</b>
+              </div>
+            )}
+            <div className="student">
             <div className="grid-row" data-payment={sum.status} data-open={String(payOpen)}>
               <div className="name-cell">
                 <input
@@ -779,6 +854,7 @@ export default function RosterView() {
               </div>
             )}
             </div>
+            </Fragment>
             );
           })}
           </div>

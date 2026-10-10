@@ -12,6 +12,7 @@ import {
   PHASE_TAGS,
   currentPhase,
   longDay,
+  nextCheckin,
   phase1DaysLeft,
   phaseName,
   today,
@@ -322,6 +323,17 @@ export default function CheckinView() {
   // on DND stay in the list, in their own band, but out of the bar and the count.
   const listed = useMemo(() => activeRows(allRows), [allRows]);
   const rows = useMemo(() => owedRows(allRows), [allRows]);
+  // Match students on their off day, grouped by the day they are next due —
+  // named once under the list so nobody wonders where they went.
+  const resting = useMemo(() => {
+    const byDay = new Map<string, string[]>();
+    for (const r of allRows) {
+      if (!r.rest || !date) continue;
+      const next = nextCheckin(r, date);
+      byDay.set(next, [...(byDay.get(next) ?? []), r.name || "(unnamed)"]);
+    }
+    return [...byDay].sort(([a], [b]) => a.localeCompare(b));
+  }, [allRows, date]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -725,6 +737,13 @@ export default function CheckinView() {
           );
         })
       )}
+
+      {!query.trim() &&
+        resting.map(([next, names]) => (
+          <p className="filter-note" key={next}>
+            Match, every other day — off today, back on {longDate(next)}: {names.join(", ")}
+          </p>
+        ))}
     </div>
   );
 }

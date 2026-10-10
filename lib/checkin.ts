@@ -4,9 +4,10 @@
 // exists; this supplies what happened. Adit ticks, Dr. Marish sees the same day.
 
 import {
-  MONTHS,
   PHASE_PRIORITY,
+  checkinDue,
   currentPhase,
+  monthsAgo,
   onDnd,
   phaseName,
   type Phase,
@@ -50,7 +51,9 @@ export function cleanEntries(raw: unknown): Entries {
 // be worse than showing a tidy list.
 
 /** `dnd` is worked out for the day being viewed — see onDnd(). */
-export type Row = Student & { archived?: boolean; dnd?: boolean };
+/** `rest`: a Match student between their every-other-day check-ins — see
+ *  checkinDue(). Off the list unless something was already logged that day. */
+export type Row = Student & { archived?: boolean; dnd?: boolean; rest?: boolean };
 
 /** Section order: Active students by phase priority (Phase 4 exam date set,
  *  then Phase 3 NBME, then Phase 1 new, then Phase 2 maintenance, then
@@ -126,7 +129,11 @@ export function buildRows(
     }));
 
   const all: Row[] = [
-    ...students.map((s) => ({ ...s, dnd: s.status === "Active" && onDnd(s, day) })),
+    ...students.map((s) => {
+      const dnd = s.status === "Active" && onDnd(s, day);
+      const rest = s.status === "Active" && !dnd && !entries[s.id] && !checkinDue(s, day);
+      return { ...s, dnd, rest };
+    }),
     ...orphans,
   ];
   const order = new Map(all.map((r, i) => [r.id, i]));
@@ -142,15 +149,6 @@ export function buildRows(
     // Same join month: whoever was added to the roster later joined later.
     return order.get(b.id)! - order.get(a.id)!;
   });
-}
-
-/** How many months ago a join month was, assuming it falls in the last year.
- *  The roster stores only the month name, so a month later than this one is
- *  read as last year's — January 2027 sorts above December 2026. */
-function monthsAgo(month: string, now: number): number {
-  const i = MONTHS.indexOf(month as (typeof MONTHS)[number]);
-  if (i < 0) return 12;
-  return (now - i + 12) % 12;
 }
 
 export function entryFor(entries: Entries, id: string): Entry {
@@ -190,9 +188,10 @@ export const UNKNOWN_COVERAGE: Coverage = {
   known: false,
 };
 
-/** Every Active student, DND or not — what the Check-in list shows. */
+/** Every Active student, DND or not — what the Check-in list shows. Match
+ *  students on their off day are left out. */
 export function activeRows(rows: Row[]): Row[] {
-  return rows.filter((r) => !r.archived && r.status === "Active");
+  return rows.filter((r) => !r.archived && r.status === "Active" && !r.rest);
 }
 
 /** The students owed an update that day: Active and not on DND. */
