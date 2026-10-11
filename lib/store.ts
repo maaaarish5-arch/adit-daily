@@ -11,7 +11,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import type { DayKey } from "./date";
 import type { Ticks } from "./tasks";
-import { cleanRoster, EMPTY_ROSTER, type Roster, type Student } from "./roster";
+import { cleanRoster, EMPTY_ROSTER, moveExamPassed, type Roster, type Student } from "./roster";
 import {
   cleanLog,
   cleanMeeting,
@@ -308,7 +308,9 @@ function parseRoster(raw: unknown): Roster {
   try {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
     return {
-      students: cleanRoster(parsed?.students),
+      // A passed exam moves an Active student to Awaiting results as the roster
+      // is read; the next save keeps it.
+      students: moveExamPassed(cleanRoster(parsed?.students), istDate(new Date().toISOString())),
       updatedAt: parsed?.updatedAt ?? null,
     };
   } catch {

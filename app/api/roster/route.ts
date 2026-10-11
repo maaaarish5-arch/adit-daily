@@ -54,6 +54,11 @@ export async function POST(req: Request) {
             memo: s.memo,
             memoEditedAt: s.memoEditedAt,
             memoSeenAt: s.memoSeenAt,
+            // The written review: only /api/review writes it.
+            reviewFor: s.reviewFor,
+            reviewAskedAt: s.reviewAskedAt,
+            reviewDoneAt: s.reviewDoneAt,
+            review: s.review,
           },
         ])
       );

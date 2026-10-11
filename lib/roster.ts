@@ -10,8 +10,8 @@ import { MEMO_MAX, cleanStamp } from "./memo";
 export const STATUSES = [
   "Active",
   "Paused",
-  // Exam written, results not out yet. Not Completed, so nobody asks for a
-  // review too early; off the daily check-in like Completed.
+  // Exam written, results not out yet. Set by itself the day after the exam
+  // date (see "exam follow-up"); off the daily check-in like Completed.
   "Awaiting results",
   "Completed",
   "Left",
@@ -186,6 +186,75 @@ export function nextCheckin(s: Pick<Student, "phase" | "phaseSince">, day: strin
   return isoOf(n);
 }
 
+/* ---------------------------- exam follow-up ----------------------------- */
+// Once a student's exam date has passed:
+//   - an Active student moves to Awaiting results by themselves (once per exam
+//     date, so setting them back to Active by hand sticks);
+//   - from the day after the exam, Check-in asks for a written review until it
+//     is marked received.
+// Exams before 1 Oct 2026 are left alone: that history predates this rule.
+
+export const REVIEW_FROM = "2026-10-01";
+export const REVIEW_MAX = 8000;
+
+/** Has this student's exam happened before `day`? */
+export function examPassed(s: Pick<Student, "examDate">, day: string): boolean {
+  return Boolean(s.examDate) && s.examDate >= REVIEW_FROM && s.examDate < day;
+}
+
+/** Where the written review stands for the current exam date. */
+export function reviewState(
+  s: Pick<Student, "examDate" | "reviewFor" | "reviewAskedAt" | "reviewDoneAt">
+): "todo" | "asked" | "done" {
+  if (s.reviewFor !== s.examDate) return "todo";
+  if (s.reviewDoneAt) return "done";
+  return s.reviewAskedAt ? "asked" : "todo";
+}
+
+/** Days after the exam when a review still not asked for counts as missed. */
+export const REVIEW_MISSED_DAYS = 2;
+
+/** Whole days from `from` to `to`, both YYYY-MM-DD. */
+export function daysBetween(from: string, to: string): number {
+  const at = (d: string) => {
+    const [y, m, day] = d.split("-").map(Number);
+    return Date.UTC(y, m - 1, day);
+  };
+  return Math.round((at(to) - at(from)) / 86_400_000);
+}
+
+/** Nobody has asked for the review yet, REVIEW_MISSED_DAYS or more after the
+ *  exam. Once it is asked for, it is no longer missed, received or not. */
+export function reviewMissed(
+  s: Pick<Student, "examDate" | "reviewFor" | "reviewAskedAt" | "reviewDoneAt">,
+  day: string
+): boolean {
+  return (
+    examPassed(s, day) &&
+    reviewState(s) === "todo" &&
+    daysBetween(s.examDate, day) >= REVIEW_MISSED_DAYS
+  );
+}
+
+/** Students Check-in should ask for a written review from on `day`. */
+export function reviewsDue(students: Student[], day: string): Student[] {
+  return students
+    .filter((s) => s.status !== "Left" && examPassed(s, day) && reviewState(s) !== "done")
+    .sort((a, b) => a.examDate.localeCompare(b.examDate) || a.name.localeCompare(b.name));
+}
+
+/** Apply the automatic move to Awaiting results. Returns the same array when
+ *  nothing changes. */
+export function moveExamPassed(students: Student[], day: string): Student[] {
+  let changed = false;
+  const next = students.map((s) => {
+    if (s.status !== "Active" || !examPassed(s, day) || s.awaitedFor === s.examDate) return s;
+    changed = true;
+    return { ...s, status: "Awaiting results" as const, awaitedFor: s.examDate };
+  });
+  return changed ? next : students;
+}
+
 export const CURRENCIES = ["USD", "INR"] as const;
 export type Currency = (typeof CURRENCIES)[number];
 
@@ -237,6 +306,19 @@ export type Student = {
   memoEditedAt: string;
   /** ISO time the Notes box was last opened. Clears the red dot. */
   memoSeenAt: string;
+  /** The written review after the exam — see "exam follow-up" below. Written
+   *  only by /api/review. `reviewFor` is the exam date these belong to; when
+   *  the exam date changes, they no longer count. */
+  reviewFor: string;
+  /** ISO time someone marked the review as asked for. */
+  reviewAskedAt: string;
+  /** ISO time the review was marked received. */
+  reviewDoneAt: string;
+  /** The review itself, pasted in when it arrives. Optional. */
+  review: string;
+  /** The exam date this student was last moved to Awaiting results for, so
+   *  the move happens once and a manual change back sticks. */
+  awaitedFor: string;
 };
 
 export type Roster = { students: Student[]; updatedAt: string | null };
@@ -311,6 +393,11 @@ export function cleanStudent(raw: unknown, index: number): Student | null {
     memo: typeof r.memo === "string" ? r.memo.slice(0, MEMO_MAX) : "",
     memoEditedAt: cleanStamp(r.memoEditedAt),
     memoSeenAt: cleanStamp(r.memoSeenAt),
+    reviewFor: cleanDate(r.reviewFor),
+    reviewAskedAt: cleanStamp(r.reviewAskedAt),
+    reviewDoneAt: cleanStamp(r.reviewDoneAt),
+    review: typeof r.review === "string" ? r.review.slice(0, REVIEW_MAX) : "",
+    awaitedFor: cleanDate(r.awaitedFor),
   };
 }
 
@@ -345,6 +432,11 @@ export function blankStudent(): Student {
     memo: "",
     memoEditedAt: "",
     memoSeenAt: "",
+    reviewFor: "",
+    reviewAskedAt: "",
+    reviewDoneAt: "",
+    review: "",
+    awaitedFor: "",
   };
 }
 

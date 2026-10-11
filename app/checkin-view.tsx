@@ -17,6 +17,8 @@ import {
   phase1DaysLeft,
   phase4In,
   phaseName,
+  reviewMissed,
+  reviewsDue,
   today,
   type Phase,
   type Student,
@@ -38,6 +40,7 @@ import { lateNight } from "@/lib/timezones";
 import ProgressPills from "./progress-pills";
 import { pillsFor } from "@/lib/progress";
 import MemoBox from "./memo-box";
+import ReviewDue, { ReviewMissed, type ReviewChange } from "./review-due";
 import { MEMO_STALE_DAYS, memoStale } from "@/lib/memo";
 import type { TrackerSummary } from "@/lib/trackers";
 
@@ -232,6 +235,29 @@ export default function CheckinView() {
     []
   );
 
+  // The written review has its own route too, for the same reason.
+  const saveReview = useCallback(async (id: string, change: ReviewChange) => {
+    setSync("saving");
+    try {
+      const r = await fetch("/api/review", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-passcode": localStorage.getItem(PASSCODE_KEY) ?? "",
+        },
+        body: JSON.stringify({ id, ...change }),
+      });
+      const d = await r.json();
+      if (!r.ok || d.error) throw new Error(d.error ?? "save failed");
+      setStudents((list) => list.map((s) => (s.id === id ? { ...s, ...d } : s)));
+      setSync("saved");
+      return true;
+    } catch {
+      setSync("error");
+      return false;
+    }
+  }, []);
+
   // Notes have their own route that changes one student's notes on the server,
   // like progress, so the whole roster is never sent.
   const postMemo = useCallback(async (id: string, body: { text?: string; seen?: true }) => {
@@ -393,6 +419,9 @@ export default function CheckinView() {
   if (!date) return <p className="skeleton">Reading the clock…</p>;
 
   const isToday = date === todayKey();
+  // Written reviews are always as of today, whichever day is on screen.
+  const reviews = reviewsDue(students, todayKey());
+  const reviewsMissed = reviews.filter((s) => reviewMissed(s, todayKey()));
   let lastRank = -1;
   let lastNight = false;
 
@@ -417,6 +446,8 @@ export default function CheckinView() {
                 : "Synced"}
         </span>
       </div>
+
+      <ReviewMissed missed={reviewsMissed} today={todayKey()} onChange={saveReview} />
 
       {storeError && (
         <div className="lock">
@@ -465,6 +496,13 @@ export default function CheckinView() {
           <span>{pct}%</span>
         </div>
       </div>
+
+      {/* From the day after an exam until the review is in; missed ones are up top. */}
+      <ReviewDue
+        due={reviews.filter((s) => !reviewsMissed.includes(s))}
+        today={todayKey()}
+        onChange={saveReview}
+      />
 
       <div className="filters">
         <input

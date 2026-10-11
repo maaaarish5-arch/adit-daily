@@ -4085,3 +4085,171 @@ select.cell {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Check-in: written reviews after the exam — the "Due today" panel's look */
+.reviews {
+  margin: 0 0 1.1rem;
+  border-color: var(--signal-deep);
+}
+
+.reviews-count {
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+}
+
+.reviews-count b {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--signal);
+  margin-right: 0.2rem;
+}
+
+.review-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.review-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.review-who {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.review-who b {
+  font-weight: 500;
+  color: var(--bone);
+  font-size: 0.85rem;
+}
+
+.review-who span,
+.review-step {
+  font-size: 0.68rem;
+  color: var(--bone-dim);
+}
+
+.review-row[data-state="todo"] .review-step {
+  color: var(--signal);
+}
+
+.review-undo {
+  margin-left: 0.6rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--bone-faint);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.review-undo:hover {
+  color: var(--bone);
+}
+
+.review-paste {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.review-paste textarea {
+  font: inherit;
+  font-size: 0.74rem;
+  width: 100%;
+  padding: 0.6rem 0.7rem;
+  color: var(--bone);
+  background: var(--ink-sink);
+  border: 1px solid var(--rule-strong);
+  resize: vertical;
+}
+
+.review-paste textarea:focus {
+  outline: none;
+  border-color: var(--signal-deep);
+}
+
+.review-paste-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+@media (max-width: 860px) {
+  .review-row {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+}
+
+/* Check-in: a written review nobody asked for by 2 days after the exam */
+.review-missed {
+  margin: 0 0 1.3rem;
+  padding: 1rem 1.1rem 1.1rem;
+  border: 1px solid var(--rust);
+  border-left-width: 4px;
+  background: rgba(192, 87, 59, 0.12);
+}
+
+.review-missed-head {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.3rem;
+}
+
+.review-missed-head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 400;
+  color: var(--bone);
+}
+
+.review-missed-tag {
+  padding: 0.25rem 0.55rem;
+  background: var(--rust);
+  color: var(--bone);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.review-missed .review-row {
+  border-bottom-color: rgba(192, 87, 59, 0.3);
+}
+
+.review-missed .review-row[data-state="todo"] .review-step {
+  color: var(--bone);
+}
+
+.review-missed .review-who span {
+  color: var(--rust);
+}
+
+.review-missed .btn {
+  background: var(--rust);
+  border-color: var(--rust);
+  color: var(--bone);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .review-missed-tag {
+    animation: none;
+  }
+}

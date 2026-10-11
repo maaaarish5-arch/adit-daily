@@ -125,6 +125,11 @@ export function buildRows(
       memo: "",
       memoEditedAt: "",
       memoSeenAt: "",
+      reviewFor: "",
+      reviewAskedAt: "",
+      reviewDoneAt: "",
+      review: "",
+      awaitedFor: "",
       archived: true,
     }));
 
