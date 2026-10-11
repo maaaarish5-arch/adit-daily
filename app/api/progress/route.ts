@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { updateRoster } from "@/lib/store";
-import { NBMES, SYSTEMS, cleanPct } from "@/lib/progress";
+import { SYSTEMS, cleanPct, nbmesFor } from "@/lib/progress";
 
 export const dynamic = "force-dynamic";
 
@@ -11,10 +11,12 @@ function authorized(req: Request): boolean {
   return req.headers.get("x-passcode") === expected;
 }
 
-const KEYS = {
-  sys: new Set<string>(SYSTEMS.map((s) => s.id)),
-  nbme: new Set<string>(NBMES.map(String)),
-};
+const SYSTEM_KEYS = new Set<string>(SYSTEMS.map((s) => s.id));
+
+/** A pill this student has: any system, or one of their NBME forms. */
+function knownPill(id: string, kind: "sys" | "nbme", key: string): boolean {
+  return kind === "sys" ? SYSTEM_KEYS.has(key) : nbmesFor(id).map(String).includes(key);
+}
 
 /** Change one pill for one student: { id, kind: "sys" | "nbme", key, pct }.
  *  `pct` null clears it (not done). Touches nothing else on the roster. */
@@ -34,7 +36,7 @@ export async function POST(req: Request) {
   if (typeof id !== "string" || (kind !== "sys" && kind !== "nbme") || typeof key !== "string") {
     return NextResponse.json({ error: "bad request" }, { status: 400 });
   }
-  if (!KEYS[kind].has(key)) {
+  if (!knownPill(id, kind, key)) {
     return NextResponse.json({ error: "unknown pill" }, { status: 400 });
   }
   const pct = body.pct === null ? null : cleanPct(body.pct);

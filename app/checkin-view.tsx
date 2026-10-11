@@ -38,7 +38,7 @@ import { longDate, shiftDays, todayKey } from "@/lib/date";
 import HomeTime, { useNow } from "./home-time";
 import { lateNight } from "@/lib/timezones";
 import ProgressPills from "./progress-pills";
-import { pillsFor } from "@/lib/progress";
+import { nbmesFor, pillsFor } from "@/lib/progress";
 import MemoBox from "./memo-box";
 import ReviewDue, { ReviewMissed, type ReviewChange } from "./review-due";
 import { MEMO_STALE_DAYS, memoStale } from "@/lib/memo";
@@ -779,6 +779,7 @@ export default function CheckinView() {
                       <ProgressPills
                         name={r.name}
                         mode={mode}
+                        nbmes={nbmesFor(r.id)}
                         progress={r.progress ?? { sys: {}, nbme: {} }}
                         onSave={(kind, key, pct) => saveProgress(r.id, kind, key, pct)}
                       />
@@ -793,6 +794,7 @@ export default function CheckinView() {
                     memo={r.memo}
                     editedAt={r.memoEditedAt}
                     progress={r.progress ?? { sys: {}, nbme: {} }}
+                    nbmes={nbmesFor(r.id)}
                     closing={memoClosing === r.id}
                     onSave={(text) => saveMemo(r.id, text)}
                     onAddScore={(kind, key, pct) => saveProgress(r.id, kind, key, pct)}

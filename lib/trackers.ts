@@ -17,7 +17,7 @@
 // questions. Reading, flashcards and videos only record the amount (120 pages,
 // 6 videos) for reference. They stay one tick; nobody ticks off every video.
 
-import { NBMES, SYSTEMS, cleanPct } from "./progress";
+import { ALL_NBMES, SYSTEMS, cleanPct } from "./progress";
 
 /** A tick and, for score tasks, the % entered. */
 export type TaskMark = { at: string; score?: number };
@@ -235,7 +235,7 @@ export type TrackerSummary = {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/;
 const SYSTEM_IDS = new Set<string>(SYSTEMS.map((s) => s.id));
-const NBME_IDS = new Set<string>(NBMES.map(String));
+const NBME_IDS = new Set<string>(ALL_NBMES.map(String));
 
 const str = (v: unknown, max: number) =>
   typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "";

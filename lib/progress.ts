@@ -35,6 +35,22 @@ export const P1_SYSTEMS: SystemId[] = ["micro", "pharm", "renal", "respi"];
 /** NBME forms 26 to 34. */
 export const NBMES = [26, 27, 28, 29, 30, 31, 32, 33, 34] as const;
 
+/** Older forms one student is doing on top of the usual ones, by student id.
+ *  Nobody else gets these pills, and their scores are refused for anyone else. */
+export const EXTRA_NBMES: Record<string, readonly number[]> = {
+  csv045: [13], // Manthan
+};
+
+/** The NBME forms this student's pills show, lowest first. */
+export function nbmesFor(studentId: string): number[] {
+  return [...(EXTRA_NBMES[studentId] ?? []), ...NBMES].sort((a, b) => a - b);
+}
+
+/** Every form someone holds a pill for — what a stored score may be keyed by. */
+export const ALL_NBMES: number[] = [
+  ...new Set([...NBMES, ...Object.values(EXTRA_NBMES).flat()]),
+].sort((a, b) => a - b);
+
 /** The NBME line that matters — the bar marks it on every pill. */
 export const NBME_TARGET = 65;
 
@@ -47,7 +63,7 @@ export type Progress = {
 export const EMPTY_PROGRESS: Progress = { sys: {}, nbme: {} };
 
 const SYSTEM_IDS = new Set<string>(SYSTEMS.map((s) => s.id));
-const NBME_IDS = new Set<string>(NBMES.map(String));
+const NBME_IDS = new Set<string>(ALL_NBMES.map(String));
 
 /** A percentage 0–100, one decimal at most, or null if it isn't one. */
 export function cleanPct(v: unknown): number | null {

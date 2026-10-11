@@ -3,13 +3,13 @@
 // The tappable pills under a student's note on Check-in.
 //   Phase 1 — Micro, Pharm, Renal, Respi
 //   Phase 2 — all 16 First Aid systems
-//   Phase 3 and 4 — NBME 26 to 34, each pill a bar filled to the score
+//   Phase 3 and 4 — NBME 26 to 34 (plus a student's extra forms, see
+//   EXTRA_NBMES), each pill a bar filled to the score
 // Tapping one opens a small box asking for the % — a system is only marked
 // done once its average is in.
 
 import { useState } from "react";
 import {
-  NBMES,
   NBME_TARGET,
   P1_SYSTEMS,
   SYSTEMS,
@@ -29,11 +29,14 @@ const HELP: Record<Mode, string> = {
 export default function ProgressPills({
   name,
   mode,
+  nbmes,
   progress,
   onSave,
 }: {
   name: string;
   mode: Mode;
+  /** This student's NBME forms, from nbmesFor(). */
+  nbmes: number[];
   progress: Progress;
   /** pct null clears the pill. Resolves false if the save failed. */
   onSave: (kind: Kind, key: string, pct: number | null) => Promise<boolean>;
@@ -46,7 +49,7 @@ export default function ProgressPills({
 
   const items =
     mode === "nbme"
-      ? NBMES.map((n) => ({ kind: "nbme" as Kind, key: String(n), label: `NBME ${n}`, short: String(n) }))
+      ? nbmes.map((n) => ({ kind: "nbme" as Kind, key: String(n), label: `NBME ${n}`, short: String(n) }))
       : SYSTEMS.filter((s) => mode === "p2" || P1_SYSTEMS.includes(s.id)).map((s) => ({
           kind: "sys" as Kind,
           key: s.id,

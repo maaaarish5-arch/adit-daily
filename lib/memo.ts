@@ -70,7 +70,6 @@ const ALIASES: Record<SystemId, string[]> = {
   respi: ["respi", "resp", "respiratory", "pulm", "pulmo", "pulmonary"],
 };
 
-const NBME_SET = new Set<string>(NBMES.map(String));
 const SYSTEM_LABEL = new Map<string, string>(SYSTEMS.map((s) => [s.id, s.label]));
 
 // "heme onc", "heme/onc" and "hemeonc" all look up the same way.
@@ -115,8 +114,10 @@ export type FoundScore = {
 };
 
 /** Every score written in the notes. If the same pill appears twice, the
- *  later line wins — notes are written top to bottom. */
-export function readScores(text: string): FoundScore[] {
+ *  later line wins — notes are written top to bottom. Only the NBME forms in
+ *  `nbmes` count (a student's own, from nbmesFor()). */
+export function readScores(text: string, nbmes: readonly number[] = NBMES): FoundScore[] {
+  const forms = new Set<string>(nbmes.map(String));
   const found = new Map<string, FoundScore>();
   const take = (f: FoundScore) => {
     const id = `${f.kind}:${f.key}`;
@@ -130,7 +131,7 @@ export function readScores(text: string): FoundScore[] {
     for (const m of line.matchAll(NBME_RE)) {
       const [whole, form, gap, num] = m;
       rest = rest.replace(whole, " ".repeat(whole.length));
-      if (!NBME_SET.has(form) || NOT_A_SCORE.test(gap)) continue;
+      if (!forms.has(form) || NOT_A_SCORE.test(gap)) continue;
       const after = line.slice((m.index ?? 0) + whole.length);
       if (UNIT_AFTER.test(after)) continue;
       const pct = cleanPct(num);
@@ -152,9 +153,10 @@ export function readScores(text: string): FoundScore[] {
 /** Scores in the notes that the pills don't already hold, with what they'd replace. */
 export function newScores(
   text: string,
-  progress: Progress
+  progress: Progress,
+  nbmes: readonly number[] = NBMES
 ): (FoundScore & { was: number | undefined })[] {
-  return readScores(text)
+  return readScores(text, nbmes)
     .map((f) => ({ ...f, was: (progress[f.kind] as Record<string, number | undefined>)[f.key] }))
     .filter((f) => f.was !== f.pct);
 }

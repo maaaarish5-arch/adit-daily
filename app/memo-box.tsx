@@ -16,6 +16,7 @@ export default function MemoBox({
   memo,
   editedAt,
   progress,
+  nbmes,
   closing,
   onSave,
   onAddScore,
@@ -24,6 +25,8 @@ export default function MemoBox({
   memo: string;
   editedAt: string;
   progress: Progress;
+  /** This student's NBME forms — only these are read out of the notes. */
+  nbmes: number[];
   /** Folding away — plays the close animation. */
   closing: boolean;
   /** Resolves false if the save failed. */
@@ -136,8 +139,8 @@ export default function MemoBox({
 
   const found = useMemo(
     () =>
-      newScores(settled, progress).filter((f) => !skipped.has(`${f.kind}:${f.key}:${f.pct}`)),
-    [settled, progress, skipped]
+      newScores(settled, progress, nbmes).filter((f) => !skipped.has(`${f.kind}:${f.key}:${f.pct}`)),
+    [settled, progress, nbmes, skipped]
   );
 
   const addAll = async () => {
