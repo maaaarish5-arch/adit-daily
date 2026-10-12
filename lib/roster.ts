@@ -16,6 +16,9 @@ export const STATUSES = [
   "Completed",
   "Left",
   "Pending",
+  // Missing in action: not seeing our messages, or not doing anything. Off the
+  // daily check-in like Paused, with a band of its own so they aren't lost.
+  "MIA",
 ] as const;
 export type Status = (typeof STATUSES)[number];
 

@@ -31,6 +31,7 @@ export const STATUS_ORDER: Status[] = [
   "Pending",
   "Awaiting results",
   "Paused",
+  "MIA",
   "Completed",
   "Left",
 ];

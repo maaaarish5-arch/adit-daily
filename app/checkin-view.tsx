@@ -346,7 +346,7 @@ export default function CheckinView() {
     [students, entries, date, now]
   );
   // The day is about Active students only. Awaiting results, Completed, Paused,
-  // Left and removed students stay out of the list, the bar and the copy —
+  // MIA, Left and removed students stay out of the list, the bar and the copy —
   // until their name is searched, so a status can still be looked up. Students
   // on DND stay in the list, in their own band, but out of the bar and the count.
   const listed = useMemo(() => activeRows(allRows), [allRows]);
@@ -549,7 +549,7 @@ export default function CheckinView() {
         <p className="empty">
           No active students right now. Add students in the <b>Students</b> tab,
           or search a name to find someone who is Awaiting results,
-          Completed, Paused or Left.
+          Completed, Paused, MIA or Left.
         </p>
       ) : visible.length === 0 ? (
         <p className="empty">

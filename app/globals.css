@@ -1370,6 +1370,11 @@ select.cell {
 .cell.tag[data-status="Completed"] {
   color: var(--bone);
 }
+/* missing in action — a warning, not yet the Left rust */
+.cell.tag[data-status="MIA"] {
+  color: #d8b85a;
+  border-color: rgba(216, 184, 90, 0.45);
+}
 /* exam written, results not out — not done yet, so not the Completed look */
 .cell.tag[data-status="Awaiting results"] {
   color: var(--signal-deep);
@@ -1797,6 +1802,10 @@ select.cell {
 .band.left,
 .band.archived {
   color: var(--rust);
+}
+
+.band.mia {
+  color: #d8b85a;
 }
 
 .band.active,

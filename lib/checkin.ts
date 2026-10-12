@@ -46,7 +46,7 @@ export function cleanEntries(raw: unknown): Entries {
 }
 
 /* -------------------------------- ordering -------------------------------- */
-// Active first (by phase), then Awaiting results, Completed, Paused, Left, then
+// Active first (by phase), then Awaiting results, Completed, Paused, MIA, Left, then
 // anyone who has a check-in today but has since come off the roster. Losing a note because a row was deleted would
 // be worse than showing a tidy list.
 
@@ -57,14 +57,15 @@ export type Row = Student & { archived?: boolean; dnd?: boolean; rest?: boolean 
 
 /** Section order: Active students by phase priority (Phase 4 exam date set,
  *  then Phase 3 NBME, then Phase 1 new, then Phase 2 maintenance, then
- *  Match) → Do not disturb → Awaiting results → Completed → Paused → Left →
+ *  Match) → Do not disturb → Awaiting results → Completed → Paused → MIA → Left →
  *  Archived. Inside a section, by the time where the student is — 6 AM there
  *  first, 11 PM – 6 AM there last (see messageOrder) — then newest join month. */
 const P = PHASE_PRIORITY.length;
 
 export function rankOf(s: Row): number {
-  if (s.archived) return P + 6;
-  if (s.status === "Left") return P + 5;
+  if (s.archived) return P + 7;
+  if (s.status === "Left") return P + 6;
+  if (s.status === "MIA") return P + 5;
   if (s.status === "Paused") return P + 4;
   if (s.status === "Completed") return P + 3;
   if (s.status === "Awaiting results") return P + 2;
@@ -89,8 +90,9 @@ export const BANDS: Record<number, { cls: string; label: string }> = {
   [P + 2]: { cls: "awaiting", label: "Awaiting results — exam written, results not out" },
   [P + 3]: { cls: "completed", label: "Completed" },
   [P + 4]: { cls: "paused", label: "Paused" },
-  [P + 5]: { cls: "left", label: "Left" },
-  [P + 6]: { cls: "archived", label: "Archived — no longer on the tracker" },
+  [P + 5]: { cls: "mia", label: "MIA — missing in action" },
+  [P + 6]: { cls: "left", label: "Left" },
+  [P + 7]: { cls: "archived", label: "Archived — no longer on the tracker" },
 };
 
 /** Roster rows plus any orphaned entries from this day, in display order as
