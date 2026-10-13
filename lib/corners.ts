@@ -244,6 +244,31 @@ export const CORNERS: Corner[] = [
         ],
       },
       {
+        id: "sh-scores",
+        title: "Updating Scores or Blocks in the Tracker",
+        skip: { id: "no-scores", label: "No scores to update today" },
+        tasks: [
+          {
+            id: "sh-sc-spot",
+            label: "Every finished UWorld block or system noted, with its score",
+            detail:
+              "Go through each student's group. Whenever someone finishes a UWorld block, or a whole system, note the system (Respi, GI…) and the score.",
+          },
+          {
+            id: "sh-sc-blocks",
+            label: "Block scores entered in the student's tracker",
+            detail:
+              "Open their tracker from the dot beside their name on Check-in. On that system's UWorld task, tick the block and type its %.",
+          },
+          {
+            id: "sh-sc-pill",
+            label: "System average checked beside the student's name on Check-in",
+            detail:
+              "The tracker fills that system's pill (Respi, GI…) by itself with the average across all its blocks. Check it against what the student sent. If it's empty or wrong, or the system wasn't on a tracker, tap the pill and type the average yourself.",
+          },
+        ],
+      },
+      {
         id: "sh-feedback",
         title: "Feedback",
         tasks: [
