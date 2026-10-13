@@ -99,7 +99,7 @@ export type HomeClock = {
   day: string;
   /** Minutes ahead of IST; negative when behind. */
   vsIst: number;
-  /** 10 PM – 7 AM there: probably not the moment to message. */
+  /** 11 PM – 6 AM there, the same window Check-in sorts by (`lateNight`). */
   night: boolean;
 };
 
@@ -111,15 +111,12 @@ export function homeClock(tz: string, at: Date): HomeClock {
   }).format(at);
   const weekday = (z: string) =>
     new Intl.DateTimeFormat("en-US", { timeZone: z, weekday: "short" }).format(at);
-  const hour = Number(
-    new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hourCycle: "h23" }).format(at)
-  );
   const theirs = weekday(tz);
   return {
     time,
     day: theirs === weekday(IST) ? "" : theirs,
     vsIst: wallMinutes(tz, at) - wallMinutes(IST, at),
-    night: hour >= 22 || hour < 7,
+    night: lateNight(tz, at),
   };
 }
 
