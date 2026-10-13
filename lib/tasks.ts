@@ -1215,6 +1215,38 @@ export const PLAYBOOKS: Playbook[] = [
     ],
   },
   {
+    id: "written-reviews",
+    title: "Written reviews — after the exam",
+    blurb:
+      "Once a student sits the exam, ask for a written review. Check-in reminds you, flags it if it was missed, and keeps the student on the list until the review is in.",
+    blocks: [
+      {
+        kind: "p",
+        text: "What it does: from the day after a student's exam date, Check-in lists them under Written reviews until the review is marked received. It tracks three things — asked, waiting, received — and flags anyone nobody asked. It never messages anyone: you ask the student on WhatsApp yourself, then record it here.",
+      },
+      {
+        kind: "steps",
+        items: [
+          "The exam is over — open the Students tab and check the student shows Awaiting results. The dashboard moves an Active student there by itself the day after their exam date. If it hasn't, change the status to Awaiting results by hand.",
+          "Check the exam date is filled in on that student's row. Every reminder below runs off the exam date: no exam date, no reminder.",
+          "Day 1, the day after the exam — Check-in shows the student under Written reviews: \"Ask <name> for a written review\". Ask them on WhatsApp that day.",
+          "As soon as you have asked, tap Review asked on their row.",
+          "Day 2 — if Review asked still hasn't been tapped two days after the exam, the student moves to a rust Missed alert at the top of Check-in: \"A written review was never asked for\". Ask straight away and tap Review asked. The alert clears.",
+          "Once asked, the row turns into a plain question: \"✓ Asked 13 Oct · Have you gotten the review?\". No warning and no deadline. The student stays under Written reviews, counted as waiting, until the review comes in.",
+          "When the review arrives, tap Yes, got it. Paste the review into the box if you have the text, then Save review — or leave the box empty and tap Mark received. The student leaves the list.",
+        ],
+      },
+      {
+        kind: "p",
+        text: "Tapped Review asked by mistake? Undo, beside the date, puts the row back to not asked. A new exam date for the same student starts the review over. Students marked Left never appear, and only exams from 1 Oct 2026 on count.",
+      },
+      {
+        kind: "pending",
+        text: "The message asking the student for a written review, and where a received review goes next, need Dr. Marish's wording.",
+      },
+    ],
+  },
+  {
     id: "links",
     title: "Every link and login",
     blurb: "The whole surface area, in one place.",

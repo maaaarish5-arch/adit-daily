@@ -287,6 +287,43 @@ export const CORNERS: Corner[] = [
         ],
       },
       {
+        id: "sh-reviews",
+        title: "Asking for Written Reviews",
+        skip: { id: "no-reviews", label: "No written reviews due today" },
+        tasks: [
+          {
+            id: "sh-rv-status",
+            label: "Exam over — student shows Awaiting results on the Students tab",
+            detail:
+              "The day after the exam the dashboard moves an Active student there by itself. Check it did; if not, change the status by hand. The exam date must be filled in, or no review reminder comes up.",
+          },
+          {
+            id: "sh-rv-ask",
+            label: "Written review asked for, and \"Review asked\" tapped on Check-in",
+            detail:
+              "Day 1 — Check-in shows \"Ask <name> for a written review\" under Written reviews. Ask on WhatsApp, then tap Review asked. Not tapped by day 2, it moves to a rust Missed alert at the top of Check-in.",
+          },
+          {
+            id: "sh-rv-followup",
+            label: "Everyone asked followed up — \"Have you gotten the review?\"",
+            detail:
+              "Once asked, the row only asks \"Have you gotten the review?\". No warning, no deadline — follow up until it comes in.",
+          },
+          {
+            id: "sh-rv-received",
+            label: "Reviews that came in marked \"Yes, got it\"",
+            detail:
+              "Tap Yes, got it, paste the review in if you have the text, and save. The student leaves the list.",
+            sop: [
+              {
+                kind: "p",
+                text: "The full step-by-step is in the SOP tab: \"Written reviews — after the exam\".",
+              },
+            ],
+          },
+        ],
+      },
+      {
         id: "sh-close",
         title: "Daily close-out",
         tasks: [

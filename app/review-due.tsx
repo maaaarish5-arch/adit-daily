@@ -7,6 +7,9 @@
 // A review nobody has asked for by REVIEW_MISSED_DAYS after the exam moves out
 // of the panel into the rust "missed" alert at the top of Check-in, and stays
 // there until it is marked asked.
+//
+// Once it is asked for, the row only asks "Have you gotten the review?" —
+// a plain question, never a warning, until it is marked received.
 
 import { useState } from "react";
 import {
@@ -64,13 +67,15 @@ export default function ReviewDue({
   onChange: (id: string, change: ReviewChange) => Promise<boolean>;
 }) {
   if (!due.length) return null;
+  const waiting = due.filter((s) => reviewState(s) === "asked").length;
   return (
     <section className="due reviews" aria-label="Written reviews to ask for">
       <div className="due-head">
         <h3>Written reviews</h3>
         <span className="hair" />
         <span className="reviews-count">
-          <b>{due.length}</b> to ask for
+          <b>{due.length - waiting}</b> to ask for
+          {waiting > 0 && <> · <b>{waiting}</b> waiting</>}
         </span>
       </div>
       {due.map((s) => (
@@ -119,7 +124,7 @@ function ReviewRow({
       <div className="review-step">
         {state === "asked" ? (
           <>
-            Asked {shortStamp(s.reviewAskedAt)} · waiting for it
+            ✓ Asked {shortStamp(s.reviewAskedAt)} · Have you gotten the review?
             <button
               className="review-undo"
               disabled={busy}
@@ -144,7 +149,7 @@ function ReviewRow({
         )}
         {state === "asked" && !pasting && (
           <button className="btn" disabled={busy} onClick={() => setPasting(true)}>
-            Review received
+            Yes, got it
           </button>
         )}
       </div>

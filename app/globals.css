@@ -4153,6 +4153,11 @@ select.cell {
   color: var(--signal);
 }
 
+/* asked: a plain question, not a warning */
+.review-row[data-state="asked"] .review-step {
+  color: var(--bone);
+}
+
 .review-undo {
   margin-left: 0.6rem;
   padding: 0;
