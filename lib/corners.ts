@@ -9,12 +9,13 @@
 // slots and SOP blocks work here. Edit the CORNERS array to change a list.
 
 import {
-  ADMIN,
   CALENDLY,
   counterValue,
   pillKey,
+  SECTIONS,
   slotKey,
   type Section,
+  type SopBlock,
   type Task,
   type Ticks,
 } from "./tasks";
@@ -84,6 +85,28 @@ export function cornerClockLines(ticks: Ticks): string[] {
 }
 
 /* -------------------------------- the lists ------------------------------- */
+
+/** The SOP under one of Today's rows — the scripts and links live there once,
+ *  and a corner row borrows them rather than keeping a second copy. */
+function todaySop(id: string): SopBlock[] {
+  return SECTIONS.flatMap((s) => s.tasks).find((t) => t.id === id)?.sop ?? [];
+}
+
+/** Today's onboarding message set, with a note under the intro: it is written
+ *  in Adit's name. */
+function onboardingMessages(): SopBlock[] {
+  return todaySop("ob-messages").flatMap((b): SopBlock[] =>
+    b.kind === "script" && b.title === "2 · Who you are"
+      ? [
+          b,
+          {
+            kind: "pending",
+            text: "This intro is written in Adit's name. If you send it yourself, the wording for your own intro needs Dr. Marish's OK.",
+          },
+        ]
+      : [b]
+  );
+}
 
 const CLOCK_IN_ROW: Task = {
   id: "clock-in",
@@ -183,31 +206,43 @@ export const CORNERS: Corner[] = [
             id: "sh-ob-group",
             label: "WhatsApp group created",
             detail: "Add Dr. Marish, the student and Adit's business number.",
+            sop: todaySop("ob-group"),
           },
           {
             id: "sh-ob-messages",
             label: "Onboarding messages sent along with the resource link",
+            detail:
+              "Welcome video, intro, Step 1 registration, onboarding form, resources doc — in that order. Every message is under \"How to do this\", with a Copy button.",
+            sop: onboardingMessages(),
           },
           {
             id: "sh-ob-contract",
             label: "Payment details confirmed, contract sent and signed",
             detail: "Make sure they sign it.",
+            sop: todaySop("ob-contract"),
           },
           {
             id: "sh-ob-meeting",
             label: "Onboarding meeting with Dr. Marish scheduled",
             detail:
               "ASAP. Chase the client and Dr. Marish for a meeting within the next 24 hours — ideally within the next 4.",
-            sop: [{ kind: "link", label: "Calendly — 30 min with Dr. Asudani", href: CALENDLY }],
+            // Today's confirmation message and links; the timing is this row's own.
+            sop: [
+              { kind: "link", label: "Calendly — 30 min with Dr. Asudani", href: CALENDLY },
+              ...todaySop("ob-meeting").filter(
+                (b) => b.kind === "script" || (b.kind === "link" && b.href !== CALENDLY)
+              ),
+            ],
           },
           {
             id: "sh-ob-vault",
             label: "Full Vault access granted on their email ID",
-            sop: [{ kind: "link", label: "Admin panel", href: ADMIN }],
+            sop: todaySop("ob-vault"),
           },
           {
             id: "sh-ob-tracker",
             label: "Monthly enrolment tracker updated with all the details",
+            sop: todaySop("ob-tracker"),
           },
           {
             id: "sh-ob-tasklist",
