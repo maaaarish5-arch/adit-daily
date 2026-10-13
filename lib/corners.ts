@@ -217,6 +217,33 @@ export const CORNERS: Corner[] = [
         ],
       },
       {
+        id: "sh-tasklist",
+        title: "Creating a Task List",
+        skip: { id: "no-tasklist", label: "No task lists made today" },
+        tasks: [
+          {
+            id: "sh-tl-cli",
+            label: "Claude CLI opened",
+          },
+          {
+            id: "sh-tl-repo",
+            label: "GitHub repo put in",
+          },
+          {
+            id: "sh-tl-checklist",
+            label: "/checklist run with the student's name and Dr. Marish's instructions",
+            detail:
+              "Use the /checklist skill, enter the person's name, and add the instructions given by Dr. Marish in the group chat.",
+          },
+          {
+            id: "sh-tl-link",
+            label: "Link copied, reviewed and pasted into the WhatsApp chat",
+            detail:
+              "The CLI will generate a link. Copy that link, review it, and then paste it into the WhatsApp chat.",
+          },
+        ],
+      },
+      {
         id: "sh-feedback",
         title: "Feedback",
         tasks: [
