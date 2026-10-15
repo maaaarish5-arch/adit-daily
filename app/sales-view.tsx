@@ -10,6 +10,8 @@ import {
   OUTCOMES,
   TAGS,
   effectiveOutcome,
+  followUpOf,
+  samePerson,
   shownEmail,
   shownName,
   shownWhatsapp,
@@ -298,6 +300,19 @@ export default function SalesView() {
         </button>
       </div>
 
+      <FollowUps
+        meetings={meetings}
+        today={today}
+        onDone={(m, day) => save(m.id, { fuDone: day, tags: m.tags.includes("followedup") ? m.tags : [...m.tags, "followedup"] })}
+        onMove={(m, day) => save(m.id, { fuDate: day, fuDone: "" })}
+        onClear={(m) => save(m.id, { fuDate: "none" })}
+        onOpen={(m) => {
+          setQuery("");
+          setDate(localDay(m.start));
+          setTimeout(() => document.getElementById(`sale-${m.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
+        }}
+      />
+
       {/* ------------------------------ the numbers ------------------------------ */}
       <div className="sales-stats">
         <div className="sales-period" role="radiogroup" aria-label="Period">
@@ -389,7 +404,7 @@ export default function SalesView() {
             const wa = shownWhatsapp(m);
             const link = waLink(wa);
             return (
-              <article className="sale" key={m.id} data-outcome={outcome || "none"} data-hidden={String(m.notSales)}>
+              <article className="sale" id={`sale-${m.id}`} key={m.id} data-outcome={outcome || "none"} data-hidden={String(m.notSales)}>
                 <div className="sale-head">
                   <span className="sale-time">
                     {q && <b>{longDate(localDay(m.start))} · </b>}
@@ -498,6 +513,12 @@ export default function SalesView() {
                     {m.log.attendees && <p className="sale-log-who">On the call: {m.log.attendees}</p>}
                     {m.log.summary && <p>{m.log.summary}</p>}
                     {m.log.next && <p className="sale-log-next">Next: {m.log.next}</p>}
+                    {followUpOf(m) && (
+                      <p className="sale-log-next">
+                        Follow up on {longDate(followUpOf(m))}
+                        {m.fuDone === followUpOf(m) && " · done"}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -530,6 +551,138 @@ export default function SalesView() {
         counts that way until you tap something else. Future calls are left out of the numbers.
       </p>
     </div>
+  );
+}
+
+/* ------------------------------ follow-ups ------------------------------ */
+// Who to message today: the follow-up date Claude read off each call (or the one
+// typed here), one line per person, their latest call only. Overdue stays until done.
+
+type FollowProps = {
+  meetings: Meeting[];
+  today: string;
+  onDone: (m: Meeting, day: string) => void;
+  onMove: (m: Meeting, day: string) => void;
+  onClear: (m: Meeting) => void;
+  onOpen: (m: Meeting) => void;
+};
+
+const daysBetween = (a: string, b: string) => Math.round((Date.parse(b) - Date.parse(a)) / 86_400_000);
+
+function FollowUps({ meetings, today, onDone, onMove, onClear, onOpen }: FollowProps) {
+  const [showSoon, setShowSoon] = useState(false);
+  const [moving, setMoving] = useState<string | null>(null);
+
+  const { due, soon } = useMemo(() => {
+    const live = meetings.filter((m) => !m.gone && !m.notSales);
+    // Latest call per person decides — an older call's follow-up is stale once they've been seen again.
+    const latest: Meeting[] = [];
+    for (const m of [...live].sort((a, b) => b.start.localeCompare(a.start))) {
+      if (!latest.some((x) => samePerson(x, m))) latest.push(m);
+    }
+    const open = latest.filter((m) => {
+      const d = followUpOf(m);
+      return d && m.fuDone !== d && !m.tags.includes("paid");
+    });
+    const week = shiftDays(today, 7);
+    return {
+      due: open.filter((m) => followUpOf(m) <= today).sort((a, b) => followUpOf(a).localeCompare(followUpOf(b))),
+      soon: open
+        .filter((m) => followUpOf(m) > today && followUpOf(m) <= week)
+        .sort((a, b) => followUpOf(a).localeCompare(followUpOf(b))),
+    };
+  }, [meetings, today]);
+
+  /** Email / WhatsApp from any of the person's calls — the latest one often came from a transcript with neither. */
+  const contact = (m: Meeting) => {
+    const theirs = meetings.filter((x) => samePerson(x, m));
+    return {
+      email: shownEmail(m) || theirs.map(shownEmail).find(Boolean) || "",
+      wa: shownWhatsapp(m) || theirs.map(shownWhatsapp).find(Boolean) || "",
+    };
+  };
+
+  /** A call already on the calendar for them on the follow-up day. */
+  const booked = (m: Meeting) =>
+    meetings.find((x) => x.id !== m.id && samePerson(x, m) && localDay(x.start) === followUpOf(m) && !x.calCancelled);
+
+  const row = (m: Meeting) => {
+    const day = followUpOf(m);
+    const late = daysBetween(day, today);
+    const { email, wa } = contact(m);
+    const link = waLink(wa);
+    const call = booked(m);
+    return (
+      <li className="fu-row" key={m.id} data-late={String(late > 0)}>
+        <div className="fu-main">
+          <button className="fu-name" onClick={() => onOpen(m)}>
+            {shownName(m)}
+          </button>
+          <span className="fu-when">
+            {late > 0 ? `${late} day${late === 1 ? "" : "s"} overdue` : day === today ? "Today" : longDate(day)}
+            {call && ` · call booked ${time(call.start)}`}
+          </span>
+          {m.log.next && <span className="fu-next">{m.log.next}</span>}
+          <span className="fu-last">
+            Last call {longDate(localDay(m.start))}
+            {m.log.summary && ` — ${m.log.summary.split(/(?<=\.)\s/)[0]}`}
+          </span>
+        </div>
+        <div className="fu-contact">
+          {link && (
+            <a className="btn" href={link} target="_blank" rel="noopener noreferrer">
+              WhatsApp
+            </a>
+          )}
+          {wa && <a href={`tel:${wa.replace(/[^\d+]/g, "")}`}>{wa}</a>}
+          {email && <a href={`mailto:${email}`}>{email}</a>}
+          {!wa && !email && <span className="fu-missing">No contact saved — tap the name and add it</span>}
+        </div>
+        <div className="fu-actions">
+          <button className="btn ghost" onClick={() => onDone(m, day)}>
+            Done
+          </button>
+          {moving === m.id ? (
+            <input
+              type="date"
+              autoFocus
+              defaultValue={shiftDays(today, 1)}
+              onChange={(e) => {
+                if (e.target.value) {
+                  onMove(m, e.target.value);
+                  setMoving(null);
+                }
+              }}
+              onBlur={() => setMoving(null)}
+              aria-label={`New follow-up date for ${shownName(m)}`}
+            />
+          ) : (
+            <button className="btn ghost" onClick={() => setMoving(m.id)}>
+              Move
+            </button>
+          )}
+          <button className="sale-link" onClick={() => onClear(m)}>
+            no follow-up
+          </button>
+        </div>
+      </li>
+    );
+  };
+
+  return (
+    <section className="fu" aria-label="Follow-ups">
+      <div className="fu-head">
+        <h3>Follow up today</h3>
+        <span className="fu-count">{due.length === 0 ? "Nobody due" : `${due.length} due`}</span>
+        {soon.length > 0 && (
+          <button className="sale-link" onClick={() => setShowSoon((v) => !v)}>
+            {showSoon ? "hide" : "show"} next 7 days ({soon.length})
+          </button>
+        )}
+      </div>
+      {due.length > 0 && <ul>{due.map(row)}</ul>}
+      {showSoon && soon.length > 0 && <ul className="fu-soon">{soon.map(row)}</ul>}
+    </section>
   );
 }
 

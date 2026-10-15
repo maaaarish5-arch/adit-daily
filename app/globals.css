@@ -4267,3 +4267,28 @@ select.cell {
     animation: none;
   }
 }
+
+/* ------------------------------ follow-ups ------------------------------ */
+.fu { border: 1px solid var(--signal-deep); border-radius: 10px; padding: 12px 14px; margin: 14px 0 18px; }
+.fu-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; }
+.fu-head h3 { margin: 0; font-family: var(--font-display); font-size: 1.15rem; color: var(--signal); }
+.fu-count { font-size: 0.75rem; color: var(--bone-dim); }
+.fu-head .sale-link { margin-left: auto; }
+.fu ul { list-style: none; margin: 10px 0 0; padding: 0; }
+.fu-soon { opacity: 0.75; }
+.fu-row { display: grid; grid-template-columns: 1fr; gap: 6px; padding: 10px 0; border-top: 1px solid var(--rule); }
+.fu-row[data-late="true"] .fu-when { color: var(--rust); }
+.fu-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fu-name { all: unset; cursor: pointer; font-weight: 700; color: var(--bone); text-decoration: underline; text-decoration-color: var(--rule-strong); }
+.fu-when { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--signal); }
+.fu-next { font-size: 0.85rem; color: var(--bone); }
+.fu-last { font-size: 0.75rem; color: var(--bone-dim); overflow-wrap: anywhere; }
+.fu-contact { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 0.8rem; }
+.fu-contact a { color: var(--signal-deep); overflow-wrap: anywhere; }
+.fu-contact a.btn { color: var(--ink); text-decoration: none; }
+.fu-missing { color: var(--bone-faint); font-size: 0.75rem; }
+.fu-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+@media (min-width: 760px) {
+  .fu-row { grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 14px; }
+  .fu-contact { justify-content: flex-end; }
+}

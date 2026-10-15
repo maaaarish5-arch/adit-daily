@@ -36,9 +36,13 @@ export type ClaudeLog = {
   next: string;
   transcriptUrl: string;
   attendees: string;
+  /** YYYY-MM-DD (IST) of the follow-up agreed on the call, or "" if none. */
+  followUp: string;
   at: string;
 };
-export const EMPTY_LOG: ClaudeLog = { status: "", summary: "", next: "", transcriptUrl: "", attendees: "", at: "" };
+export const EMPTY_LOG: ClaudeLog = { status: "", summary: "", next: "", transcriptUrl: "", attendees: "", followUp: "", at: "" };
+
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export function cleanLog(raw: unknown): ClaudeLog {
   if (!raw || typeof raw !== "object") return { ...EMPTY_LOG };
@@ -52,6 +56,7 @@ export function cleanLog(raw: unknown): ClaudeLog {
     next: s(r.next, 600),
     transcriptUrl: /^https:\/\/(docs|drive)\.google\.com\//.test(url) ? url : "",
     attendees: s(r.attendees, 300),
+    followUp: DAY_RE.test(s(r.followUp, 10)) ? s(r.followUp, 10) : "",
     at: s(r.at, 40),
   };
 }
@@ -91,6 +96,10 @@ export type Meeting = {
   note: string;
   /** Tapped "Not a sales call" — kept, but out of the day list and the numbers. */
   notSales: boolean;
+  /** Follow-up date set by hand: YYYY-MM-DD overrides Claude's, "none" clears it, "" uses Claude's. */
+  fuDate: string;
+  /** The follow-up date that was ticked off as done. */
+  fuDone: string;
   updatedAt: string;
 
   /* ---- from Claude's nightly sync (only /api/sales/claude writes it) ---- */
@@ -98,7 +107,7 @@ export type Meeting = {
 };
 
 /** The fields the page is allowed to change. */
-export const EDITABLE = ["name", "email", "whatsapp", "outcome", "tags", "note", "notSales"] as const;
+export const EDITABLE = ["name", "email", "whatsapp", "outcome", "tags", "note", "notSales", "fuDate", "fuDone"] as const;
 export type Edit = Partial<Pick<Meeting, (typeof EDITABLE)[number]>>;
 
 const OUTCOME_IDS = new Set<string>(OUTCOMES.map((o) => o.id));
@@ -115,6 +124,8 @@ export function cleanEdit(raw: unknown): Edit {
   if ("note" in r) out.note = str(r.note, 4000) ?? "";
   if ("outcome" in r) out.outcome = OUTCOME_IDS.has(r.outcome as string) ? (r.outcome as Outcome) : "";
   if ("notSales" in r) out.notSales = r.notSales === true;
+  if ("fuDate" in r) out.fuDate = r.fuDate === "none" || DAY_RE.test(String(r.fuDate)) ? String(r.fuDate) : "";
+  if ("fuDone" in r) out.fuDone = DAY_RE.test(String(r.fuDone)) ? String(r.fuDone) : "";
   if ("tags" in r && Array.isArray(r.tags)) {
     out.tags = [...new Set(r.tags.filter((t) => TAG_IDS.has(t as string)))] as Tag[];
   }
@@ -148,6 +159,8 @@ export function cleanMeeting(raw: unknown): Meeting | null {
     tags: e.tags ?? [],
     note: e.note ?? "",
     notSales: e.notSales ?? false,
+    fuDate: e.fuDate ?? "",
+    fuDone: e.fuDone ?? "",
     updatedAt: s(r.updatedAt),
     log: cleanLog(r.log),
   };
@@ -157,6 +170,20 @@ export function cleanMeeting(raw: unknown): Meeting | null {
 export const shownName = (m: Meeting) => m.name || m.calName || "(no name)";
 export const shownEmail = (m: Meeting) => m.email || m.calEmail;
 export const shownWhatsapp = (m: Meeting) => m.whatsapp || m.calWhatsapp;
+
+/** When to follow up: the date typed on the page, else the one Claude read off the call. */
+export const followUpOf = (m: Meeting): string => (m.fuDate === "none" ? "" : m.fuDate || m.log.followUp);
+
+/** One person across all their calls: same email, or same name once "Dr" and spacing are dropped. */
+const plainName = (n: string) => n.toLowerCase().replace(/^dr\.?\s+/, "").replace(/[^a-z]+/g, " ").trim();
+export function samePerson(a: Meeting, b: Meeting): boolean {
+  const ea = shownEmail(a).toLowerCase();
+  const eb = shownEmail(b).toLowerCase();
+  if (ea && eb) return ea === eb;
+  const na = plainName(shownName(a));
+  const nb = plainName(shownName(b));
+  return Boolean(na) && na !== "no name" && na === nb;
+}
 
 /** The outcome: what was tapped, else what the calendar says (cancelled / absent). */
 export const effectiveOutcome = (m: Meeting): Outcome | "" =>
@@ -305,6 +332,8 @@ export function mergeFromCalendar(stored: Meeting | null, cal: CalendarPart): Me
     tags: [],
     note: "",
     notSales: false,
+    fuDate: "",
+    fuDone: "",
     updatedAt: "",
     log: { ...EMPTY_LOG },
   };

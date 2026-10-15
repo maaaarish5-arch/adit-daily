@@ -812,6 +812,9 @@ export type ClaudeEntry = {
   next?: string;
   transcriptUrl?: string;
   attendees?: string;
+  /** YYYY-MM-DD (IST) of the follow-up agreed on the call. */
+  followUpDate?: string;
+  whatsapp?: string;
 };
 
 /** Fold Claude's log in. Matches an existing call (same id, or same start and
@@ -833,11 +836,17 @@ export async function applyClaudeLog(entries: ClaudeEntry[]): Promise<{ matched:
         (name && [m.name, m.calName].some((x) => x && (x.toLowerCase().includes(name) || name.includes(x.toLowerCase()))));
       const found =
         (e.eventId && all.find((m) => m.id === e.eventId || m.id === `gcal:${e.eventId}`)) || all.find((m) => near(m) && sameGuest(m)) || null;
-      const log = cleanLog({ ...e, at });
+      const log = cleanLog({ ...e, followUp: e.followUpDate, at });
+      const whatsapp = (e.whatsapp ?? "").trim().slice(0, 40);
       if (found) {
-        const next = { ...found, log: { ...log, transcriptUrl: log.transcriptUrl || found.log.transcriptUrl } };
+        const next = {
+          ...found,
+          calWhatsapp: found.calWhatsapp || whatsapp,
+          log: { ...log, transcriptUrl: log.transcriptUrl || found.log.transcriptUrl },
+        };
         await putMeeting(next);
         found.log = next.log;
+        found.calWhatsapp = next.calWhatsapp;
         matched++;
         continue;
       }
@@ -848,7 +857,7 @@ export async function applyClaudeLog(entries: ClaudeEntry[]): Promise<{ matched:
         start,
         calName: (e.name ?? "").slice(0, 120),
         calEmail: email.slice(0, 160),
-        calWhatsapp: "",
+        calWhatsapp: whatsapp,
         answers: [],
         calCancelled: false,
         calNoShow: false,
@@ -861,6 +870,8 @@ export async function applyClaudeLog(entries: ClaudeEntry[]): Promise<{ matched:
         tags: [],
         note: "",
         notSales: e.salesCall === false,
+        fuDate: "",
+        fuDone: "",
         updatedAt: at,
         log: log ?? { ...EMPTY_LOG },
       };
