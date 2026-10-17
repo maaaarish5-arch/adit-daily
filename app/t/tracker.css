@@ -602,6 +602,12 @@ button.trk-tick::before {
   background: var(--accent-soft);
 }
 
+.trk-setup-acts {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
 .trk-setup-q {
   font-size: 13.5px;
   font-weight: 700;

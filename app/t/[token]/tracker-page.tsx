@@ -583,6 +583,18 @@ function SetupForm({
     setError(err ?? "");
   }, [made, unchanged, send, taskId, a, b, spec.info]);
 
+  // Removes this task's split, so its blocks, ticks and scores go, and the form
+  // goes back to its empty first state. Asks first when there are ticks or scores to lose.
+  const reset = async () => {
+    if (hasMarks && !window.confirm("Reset this? This clears this task's blocks, ticks and scores.")) return;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    const err = await send({ taskId, setup: null });
+    setA("");
+    setB("");
+    setError(err ?? "");
+  };
+
   useEffect(() => {
     if (timer.current) clearTimeout(timer.current);
     if (!made || typeof made === "string" || destructive || unchanged) return;
@@ -649,9 +661,14 @@ function SetupForm({
         </div>
       )}
       {current && (
-        <button className="trk-link" onClick={onDone}>
-          Done
-        </button>
+        <div className="trk-setup-acts">
+          <button className="trk-link" onClick={reset}>
+            Reset
+          </button>
+          <button className="trk-link" onClick={onDone}>
+            Done
+          </button>
+        </div>
       )}
     </div>
   );
