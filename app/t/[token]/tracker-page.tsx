@@ -43,6 +43,7 @@ type Body = {
 };
 type Send = (body: Body, optimistic?: (s: TrackerState) => TrackerState) => Promise<string | null>;
 
+const DARK_KEY = "adit-trk-dark";
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const dayParts = (k: string) => {
   const [y, m, d] = k.split("-").map(Number);
@@ -91,6 +92,20 @@ export default function TrackerPage({
   stateRef.current = state;
 
   useEffect(() => setToday(todayKey()), []);
+
+  // Dark only where ?dark=1 was opened once in this browser (?dark=0 undoes it).
+  // Students never open it, so they always get the light page.
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    try {
+      const flag = new URLSearchParams(window.location.search).get("dark");
+      if (flag === "1") localStorage.setItem(DARK_KEY, "1");
+      if (flag === "0") localStorage.removeItem(DARK_KEY);
+      setDark(localStorage.getItem(DARK_KEY) === "1");
+    } catch {
+      // Storage blocked (private window): stay light.
+    }
+  }, []);
 
   // Live: pick up ticks made on another device or by someone else with the link.
   useEffect(() => {
@@ -185,7 +200,7 @@ export default function TrackerPage({
     ));
 
   return (
-    <div className="trk">
+    <div className={dark ? "trk trk-dark" : "trk"}>
       <header className="trk-head">
         <div className="trk-head-text">
           {tracker.subtitle && <div className="trk-who">{tracker.subtitle}</div>}

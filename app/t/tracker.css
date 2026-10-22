@@ -29,6 +29,10 @@ body:has(.trk) .grain {
   --warm-ink: #7c3d0b;
   --late: #e8a453;
   --bad: #b91c1c;
+  --head: rgba(243, 245, 246, 0.94);
+  --well: #fbfcfc;
+  --field: #ffffff;
+  --box-line: #c6d0d2;
 
   min-height: 100vh;
   background: var(--bg);
@@ -67,7 +71,7 @@ body:has(.trk) .grain {
   justify-content: space-between;
   gap: 12px 24px;
   padding: 18px max(32px, calc((100vw - 1240px) / 2));
-  background: rgba(243, 245, 246, 0.94);
+  background: var(--head);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
@@ -505,9 +509,9 @@ body:has(.trk) .grain {
   padding: 0;
   display: grid;
   place-items: center;
-  border: 2px solid #c6d0d2;
+  border: 2px solid var(--box-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--field);
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
@@ -547,7 +551,7 @@ button.trk-tick::before {
 
 .trk-tick[data-part="true"] {
   border-color: var(--accent);
-  background: linear-gradient(to top, var(--accent-soft) 50%, #fff 50%);
+  background: linear-gradient(to top, var(--accent-soft) 50%, var(--field) 50%);
 }
 
 .trk-tick.small {
@@ -634,7 +638,7 @@ button.trk-tick::before {
   padding: 6px 8px;
   border: 1.5px solid var(--accent-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--field);
   font: inherit;
   font-size: 15px;
   font-weight: 700;
@@ -768,7 +772,7 @@ button.trk-tick::before {
   margin-top: 10px;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: #fbfcfc;
+  background: var(--well);
   overflow: hidden;
 }
 
@@ -989,4 +993,32 @@ button.trk-tick::before {
   .trk * {
     transition: none !important;
   }
+}
+
+/* ---------------------------------- dark ----------------------------------
+   Only on a browser that has ?dark=1 saved (see tracker-page.tsx). Students
+   never get it. Same tokens, darker values. */
+
+body:has(.trk.trk-dark) {
+  background: #0c1214;
+}
+
+.trk.trk-dark {
+  --bg: #0c1214;
+  --card: #142022;
+  --ink: #e6eeef;
+  --muted: #9fb0b3;
+  --faint: #6c8083;
+  --line: #243539;
+  --accent: #52c7b4;
+  --accent-soft: #123a36;
+  --accent-line: #1f5a52;
+  --warm: #2a2014;
+  --warm-ink: #f3c48a;
+  --late: #e8a453;
+  --bad: #f87171;
+  --head: rgba(12, 18, 20, 0.94);
+  --well: #101a1c;
+  --field: #0f1a1c;
+  --box-line: #3a4d50;
 }
