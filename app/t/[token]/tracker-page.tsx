@@ -648,8 +648,8 @@ function SetupForm({
       {onClose && (
         <button
           className="trk-x"
-          aria-label="Close, skip the count"
-          title="Skip this. The count is optional."
+          aria-label="Close"
+          title="Close"
           onClick={() => {
             if (timer.current) clearTimeout(timer.current);
             timer.current = null;
@@ -692,9 +692,9 @@ function SetupForm({
 function intro(kind: SplitKind): string {
   if (kind === "uworld") return "How many UWorld questions are you doing?";
   if (kind === "nbme") return "How is this NBME split?";
-  if (kind === "pages") return "How many pages is this? (optional)";
-  if (kind === "cards") return "How many cards is this? (optional)";
-  return "How many videos is this? (optional)";
+  if (kind === "pages") return "How many pages is this?";
+  if (kind === "cards") return "How many cards is this?";
+  return "How many videos is this?";
 }
 
 function previewOf(kind: SplitKind, s: { total: number; per: number }): string {
