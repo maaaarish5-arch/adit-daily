@@ -137,3 +137,14 @@ That is the roster. For everything, ask Dr. Marish — he has the Redis keys.
 - Deleting students or historical data
 - Anything touching a different Vercel project or a different site
 - Sending any message to a student on his behalf
+
+## Skills that come with this repo
+
+Open Claude inside this folder and two commands are ready, for anyone on the team:
+
+- `/checklist <student> <plan>` — turns a study plan into a live tracker on the
+  site (it publishes straight to Vercel, runs the quality checks, and returns the
+  link). Needs Python. Skill: `.claude/skills/checklist/`.
+- `/daily` — sets up a safe branch and house rules for changing the dashboard,
+  and pushes and verifies when told "push". Needs Git, Node and `gh`.
+  Skill: `.claude/skills/daily/`.

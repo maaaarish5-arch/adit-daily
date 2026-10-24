@@ -1,0 +1,201 @@
+{
+  "action": "publish",
+  "studentId": "<id from /api/roster>",
+  "plan": {
+    "title": "Renal System",
+    "subtitle": "Dr. Shahed · starts Thu 8 Oct · UWorld wrapped by Monday, Tuesday night max",
+    "cards": [
+      {
+        "title": "Timeline",
+        "rows": [
+          {
+            "label": "Day 1 · Thu 8 Oct",
+            "value": "Micro + Pharm, FA Guide 10 pages"
+          },
+          {
+            "label": "Day 2 · Fri 9 Oct",
+            "value": "FA Guide 20 pages"
+          },
+          {
+            "label": "Day 3 · Sat 10 Oct",
+            "value": "Mehlman Medical videos"
+          },
+          {
+            "label": "Day 4 · Sun 11 Oct",
+            "value": "FA Foundation Anki"
+          },
+          {
+            "label": "Day 5–6 · Mon 12 – Tue 13 Oct",
+            "value": "Renal UWorld"
+          }
+        ]
+      },
+      {
+        "title": "Hard cutoffs",
+        "rows": [
+          {
+            "label": "Micro + Pharm",
+            "value": "Thu evening"
+          },
+          {
+            "label": "FA Guide (max)",
+            "value": "Sat 12 pm"
+          },
+          {
+            "label": "FA Foundation Anki",
+            "value": "Sun 5 pm"
+          },
+          {
+            "label": "Renal UWorld (max)",
+            "value": "Tue night"
+          }
+        ]
+      }
+    ],
+    "sections": [
+      {
+        "title": "",
+        "sub": "",
+        "days": [
+          {
+            "label": "Day 1",
+            "from": "2026-10-08",
+            "to": "2026-10-08",
+            "topic": "Micro + Pharm + FA Guide",
+            "blocks": [
+              {
+                "label": "Morning",
+                "tasks": [
+                  {
+                    "id": "d1-1",
+                    "text": "Renal Microbiology",
+                    "meta": "From the First Aid Guide itself — it's laid out right there in the renal section"
+                  },
+                  {
+                    "id": "d1-2",
+                    "text": "Renal Pharmacology",
+                    "meta": "If she wants — also from the First Aid Guide, same way as micro. Both done by Thursday evening"
+                  }
+                ]
+              },
+              {
+                "label": "By Thursday night",
+                "tasks": [
+                  {
+                    "id": "d1-3",
+                    "text": "First Aid Guide · 10 pages",
+                    "meta": "Chunk 1 of 3 · begin after micro + pharm"
+                  }
+                ]
+              }
+            ],
+            "callout": ""
+          },
+          {
+            "label": "Day 2",
+            "from": "2026-10-09",
+            "to": "2026-10-09",
+            "topic": "First Aid Guide",
+            "blocks": [
+              {
+                "label": "By afternoon",
+                "tasks": [
+                  {
+                    "id": "d2-1",
+                    "text": "First Aid Guide · 10 more pages",
+                    "meta": "Chunk 2 of 3"
+                  }
+                ]
+              },
+              {
+                "label": "By night",
+                "tasks": [
+                  {
+                    "id": "d2-2",
+                    "text": "First Aid Guide · 10 more pages",
+                    "meta": "Chunk 3 of 3 · if needed, can spill into Saturday morning"
+                  }
+                ]
+              }
+            ],
+            "callout": ""
+          },
+          {
+            "label": "Day 3",
+            "from": "2026-10-10",
+            "to": "2026-10-10",
+            "topic": "FA Guide wrap-up + Mehlman Medical",
+            "blocks": [
+              {
+                "label": "By 11 am – 12 pm max",
+                "tasks": [
+                  {
+                    "id": "d3-1",
+                    "text": "Finish First Aid Guide (only if running over)",
+                    "meta": "Hard stop Saturday 12 pm — not later"
+                  }
+                ]
+              },
+              {
+                "label": "Rest of the day",
+                "tasks": [
+                  {
+                    "id": "d3-2",
+                    "text": "Mehlman Medical videos · Renal",
+                    "meta": "Entire day of Saturday goes to this",
+                    "split": "videos"
+                  }
+                ]
+              }
+            ],
+            "callout": ""
+          },
+          {
+            "label": "Day 4",
+            "from": "2026-10-11",
+            "to": "2026-10-11",
+            "topic": "Anki",
+            "blocks": [
+              {
+                "label": "Until 5 pm",
+                "tasks": [
+                  {
+                    "id": "d4-1",
+                    "text": "FA Foundation Anki · Renal",
+                    "meta": "Finish by 5 pm Sunday",
+                    "split": "cards"
+                  }
+                ]
+              }
+            ],
+            "callout": ""
+          },
+          {
+            "label": "Day 5–6",
+            "from": "2026-10-12",
+            "to": "2026-10-13",
+            "topic": "UWorld",
+            "blocks": [
+              {
+                "label": "Target · end of Monday",
+                "tasks": [
+                  {
+                    "id": "d5-1",
+                    "text": "Renal UWorld · wrap up",
+                    "meta": "End of Monday ideal · Tuesday lunch max · Tuesday night at the absolute outside",
+                    "score": {
+                      "kind": "sys",
+                      "key": "renal"
+                    },
+                    "split": "uworld"
+                  }
+                ]
+              }
+            ],
+            "callout": "Renal closes out by **Monday night — Tuesday lunch max, Tuesday night at the very outside.** Micro + Pharm, FA Guide, Mehlman Medical, Anki, UWorld all done."
+          }
+        ]
+      }
+    ]
+  }
+}
