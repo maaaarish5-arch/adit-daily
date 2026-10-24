@@ -7,6 +7,7 @@ import SalesView from "./sales-view";
 import TrackersView from "./trackers-view";
 import TodosView from "./todos-view";
 import RemindersView from "./reminders-view";
+import RemindersDue from "./reminders-due";
 import CornerView from "./corner-view";
 import { Sop } from "./sop";
 import { CORNERS, type CornerId } from "@/lib/corners";
@@ -678,6 +679,8 @@ export default function Page() {
           <span>Storage not connected — ticks will not save yet</span>
         </div>
       )}
+
+      {tab === "adit" && <RemindersDue key="adit-due" />}
 
       {tab === "adit" && (
         <nav className="subtabs">

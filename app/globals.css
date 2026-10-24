@@ -4435,3 +4435,43 @@ select.cell {
 .rem-overdue .rem-dot {
   background: var(--rust);
 }
+
+/* Adit's Corner: "Reminders today" panel (same frame as Students' Due today) */
+
+.rem-due {
+  margin-top: 1.4rem;
+  margin-bottom: 0;
+}
+
+.rem-due-row {
+  grid-template-columns: minmax(0, 1fr) auto 6.5rem;
+  align-items: center;
+}
+
+.rem-due-row .due-name i {
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.72rem;
+}
+
+.rem-due-row .rem-tick {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.55rem;
+  justify-self: end;
+}
+
+.rem-due-row[data-late="true"] .due-which,
+.rem-due-row[data-late="true"] .due-state,
+.rem-late-sum,
+.rem-late-sum b {
+  color: var(--rust);
+}
+
+@media (max-width: 700px) {
+  .rem-due-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .rem-due-row .due-which {
+    display: none;
+  }
+}
