@@ -58,7 +58,7 @@ export type Row = Student & { archived?: boolean; dnd?: boolean; rest?: boolean 
 /** Section order: Active students by phase priority (Phase 4 exam date set,
  *  then Phase 3 NBME, then Phase 1 new, then Phase 2 maintenance, then
  *  Match) → Do not disturb → Awaiting results → Completed → Paused → MIA → Left →
- *  Archived. Inside a section, by the time where the student is — 6 AM there
+ *  Archived. Phase 1 is newest join date first. Other sections: by the time where the student is — 6 AM there
  *  first, 11 PM – 6 AM there last (see messageOrder) — then newest join month. */
 const P = PHASE_PRIORITY.length;
 
@@ -149,6 +149,12 @@ export function buildRows(
   return all.sort((a, b) => {
     const r = rankOf(a) - rankOf(b);
     if (r !== 0) return r;
+    // New students: the latest to join sit at the top, whatever the time there.
+    if (!a.archived && !b.archived && rankOf(a) === PHASE_PRIORITY.indexOf(1) + 1) {
+      const j = (b.phaseSince || "").localeCompare(a.phaseSince || "");
+      if (j !== 0) return j;
+      return order.get(b.id)! - order.get(a.id)!;
+    }
     const t = clock.get(a.id)! - clock.get(b.id)!;
     if (t !== 0) return t;
     const m = monthsAgo(b.month, now) - monthsAgo(a.month, now);
