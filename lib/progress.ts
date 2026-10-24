@@ -38,7 +38,7 @@ export const NBMES = [26, 27, 28, 29, 30, 31, 32, 33, 34] as const;
 /** Older forms one student is doing on top of the usual ones, by student id.
  *  Nobody else gets these pills, and their scores are refused for anyone else. */
 export const EXTRA_NBMES: Record<string, readonly number[]> = {
-  csv045: [13], // Manthan
+  csv045: [10, 12, 13], // Manthan
 };
 
 /** The NBME forms this student's pills show, lowest first. */
