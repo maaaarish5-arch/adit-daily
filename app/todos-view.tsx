@@ -18,7 +18,20 @@ type SyncState = "idle" | "saving" | "saved" | "error";
 
 const PASSCODE_KEY = "adit-daily:passcode";
 
-export default function TodosView() {
+/** The To-do tab holds everyone but Adit; Adit's items live in his Corner
+ *  (Adit's Corner → To-do). Same list, same storage — only the view differs,
+ *  so changing an item's owner moves it between the two. */
+export const TODO_TAB_OWNERS: readonly Owner[] = OWNERS.filter((o) => o !== "Adit");
+
+export default function TodosView({
+  owners = TODO_TAB_OWNERS,
+  title = "To-do",
+  blurb = "One-off work — the ops handover and everything from the planning meetings. Adit's own items are in Adit's Corner → To-do. Separate from the daily checklist, and deliberately not scored.",
+}: {
+  owners?: readonly Owner[];
+  title?: string;
+  blurb?: string;
+} = {}) {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [sync, setSync] = useState<SyncState>("idle");
@@ -114,9 +127,9 @@ export default function TodosView() {
 
   const addTodo = () => {
     const owner: Owner =
-      ownerFilter !== "all" && OWNERS.includes(ownerFilter as Owner)
+      ownerFilter !== "all" && owners.includes(ownerFilter as Owner)
         ? (ownerFilter as Owner)
-        : "Adit";
+        : owners[0];
     const fresh = blankTodo(owner);
     commit([...todos, fresh]);
     setTimeout(() => {
@@ -134,13 +147,17 @@ export default function TodosView() {
   /* -------------------------------- derived -------------------------------- */
 
   const t = today();
-  const stats = useMemo(() => progress(todos), [todos]);
-  const openCount = todos.filter((x) => !x.done).length;
-  const lateCount = todos.filter((x) => isLate(x, t)).length;
+  const mineAll = todos.filter((x) => owners.includes(x.owner));
+  const stats = useMemo(
+    () => progress(todos).filter((s) => owners.includes(s.owner)),
+    [todos, owners]
+  );
+  const openCount = mineAll.filter((x) => !x.done).length;
+  const lateCount = mineAll.filter((x) => isLate(x, t)).length;
 
   const shownOwners = useMemo(
-    () => (ownerFilter === "all" ? OWNERS : OWNERS.filter((o) => o === ownerFilter)),
-    [ownerFilter]
+    () => (ownerFilter === "all" ? owners : owners.filter((o) => o === ownerFilter)),
+    [ownerFilter, owners]
   );
 
   if (loading) return <p className="skeleton">Loading the to-do list…</p>;
@@ -149,12 +166,8 @@ export default function TodosView() {
     <div className="todos" ref={rootRef}>
       <div className="roster-head">
         <div>
-          <h2>To-do</h2>
-          <p className="hint">
-            One-off work — the ops handover, everything from the planning meetings,
-            and every loose task from the old Checklist tab (with its priority).
-            Separate from the daily checklist, and deliberately not scored.
-          </p>
+          <h2>{title}</h2>
+          <p className="hint">{blurb}</p>
         </div>
         <span className="roster-sync">
           <span className="sync-dot" data-state={sync} />
@@ -195,12 +208,14 @@ export default function TodosView() {
       </div>
 
       <div className="filters">
-        <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
-          <option value="all">Everyone</option>
-          {OWNERS.map((o) => (
-            <option key={o}>{o}</option>
-          ))}
-        </select>
+        {owners.length > 1 && (
+          <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
+            <option value="all">Everyone</option>
+            {owners.map((o) => (
+              <option key={o}>{o}</option>
+            ))}
+          </select>
+        )}
         <button
           className="btn ghost"
           data-on={String(showDone)}

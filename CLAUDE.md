@@ -82,8 +82,9 @@ top — ink background, bone text, one lime signal colour. Match what is there.
 | `app/roster-view.tsx` | Students tab |
 | `app/checkin-view.tsx` | Check-in tab |
 | `lib/corners.ts` | **The three Corners** (Adit, Shreeman, Sanskar): each person's checklist, clock, grade and close-out. Edit the `CORNERS` array to change a person's list. |
+| `app/reminders-view.tsx`, `lib/reminders.ts` | Adit's Corner → **Reminders**: day by day for 30 days, plus overdue. Unpaid instalments, dated to-dos, sales follow-ups, exams and DND ends, all read off existing data (nothing stored). Reminders added there are dated to-dos for Adit. |
 | `app/corner-view.tsx` | One corner page. Days stored per person in Redis as `adit:corner:<person>:<date>` (`/api/corner`, `/api/corner/month`). |
-| `app/todos-view.tsx` | To-do tab. The old Checklist tab was retired into it on 5 Oct 2026 — its tasks were merged in once (as Adit's items, with priority) by `/api/todos`. `adit:dump` is kept untouched as a backup. |
+| `app/todos-view.tsx` | To-do tab (everyone but Adit) and Adit's Corner → To-do (Adit's items): the same component and the same list, filtered by owner, so changing an owner moves an item between them. The old Checklist tab was retired into it on 5 Oct 2026 — its tasks were merged in once (as Adit's items, with priority) by `/api/todos`. `adit:dump` is kept untouched as a backup. |
 | `app/date-field.tsx` | Day/month/year dropdowns — read the comment before editing |
 | `app/review-due.tsx`, `/api/review` | Check-in's **Written reviews** panel: from the day after a student's exam date until the review is marked received (exams from 1 Oct 2026). Not marked asked by 2 days after the exam (`reviewMissed()`), the student moves into a rust **Missed** alert at the top of Check-in until it is. The day after the exam, an Active student moves to Awaiting results by themselves, once per exam date (`moveExamPassed()` in `lib/roster.ts`, applied when the roster is read). Review fields are written only by `/api/review`. |
 | `lib/memo.ts`, `app/memo-box.tsx` | The **Notes** box on Check-in (per student, red dot after 3 days unopened). Written only by `/api/memo`. |

@@ -75,8 +75,8 @@ export default function Page() {
   const [date, setDate] = useState<string | null>(null);
 
   const [tab, setTab] = useState<Tab>("today");
-  // Adit's Corner has two pages: the daily checklist and Reminders.
-  const [aditPage, setAditPage] = useState<"daily" | "reminders">("daily");
+  // Adit's Corner has three pages: the daily checklist, his to-dos and Reminders.
+  const [aditPage, setAditPage] = useState<"daily" | "todo" | "reminders">("daily");
   const [ticks, setTicks] = useState<Ticks>({});
   const [notes, setNotes] = useState("");
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -684,6 +684,9 @@ export default function Page() {
           <button data-on={String(aditPage === "daily")} onClick={() => setAditPage("daily")}>
             Daily
           </button>
+          <button data-on={String(aditPage === "todo")} onClick={() => setAditPage("todo")}>
+            To-do
+          </button>
           <button data-on={String(aditPage === "reminders")} onClick={() => setAditPage("reminders")}>
             Reminders
           </button>
@@ -692,6 +695,13 @@ export default function Page() {
 
       {tab === "adit" && aditPage === "reminders" ? (
         <RemindersView />
+      ) : tab === "adit" && aditPage === "todo" ? (
+        <TodosView
+          key="adit-todo"
+          owners={["Adit"]}
+          title="Adit's to-do"
+          blurb="Adit's one-off work, moved here from the To-do tab. Ticked once and done; not part of the daily score. Dated items also show on Reminders."
+        />
       ) : CORNERS.some((c) => c.id === tab) ? (
         <CornerView
           key={tab}
