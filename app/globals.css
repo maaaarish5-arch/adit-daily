@@ -4475,3 +4475,9 @@ select.cell {
     display: none;
   }
 }
+
+.rem-more {
+  margin-top: 0.7rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.58rem;
+}

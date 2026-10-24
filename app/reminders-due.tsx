@@ -10,9 +10,13 @@ import { buildReminders, KIND_LABEL, remindersOn, type Reminder } from "@/lib/re
 import { longDay } from "@/lib/roster";
 import { shiftDays } from "@/lib/date";
 
+/** Overdue rows shown before "Show all", so the corner isn't pushed off-screen. */
+const OVERDUE_SHOWN = 3;
+
 export default function RemindersDue() {
   const { today, students, todos, meetings, loading, toggle } = useReminderData();
   const [picked, setPicked] = useState<string | null>(null);
+  const [allLate, setAllLate] = useState(false);
   const day = picked ?? today;
   const isToday = day === today;
 
@@ -36,7 +40,7 @@ export default function RemindersDue() {
     <div className="due-row rem-due-row" key={r.key} data-paid={String(r.done)} data-late={String(late)}>
       <span className="due-name">
         {r.title}
-        {r.detail && <i> · {r.detail}</i>}
+        {r.detail && <i> · {r.detail.length > 110 ? `${r.detail.slice(0, 110).trimEnd()}…` : r.detail}</i>}
       </span>
       <span className="due-which">{late ? longDay(r.day) : KIND_LABEL[r.kind]}</span>
       {r.todoId ? (
@@ -87,7 +91,14 @@ export default function RemindersDue() {
           <p className="due-sum rem-late-sum">
             <b>{overdue.length}</b> overdue
           </p>
-          <div className="due-list">{overdue.map((r) => row(r, true))}</div>
+          <div className="due-list">
+            {(allLate ? overdue : overdue.slice(0, OVERDUE_SHOWN)).map((r) => row(r, true))}
+          </div>
+          {overdue.length > OVERDUE_SHOWN && (
+            <button className="btn ghost rem-more" onClick={() => setAllLate((v) => !v)}>
+              {allLate ? "Show fewer" : `Show all ${overdue.length} overdue`}
+            </button>
+          )}
         </>
       )}
     </section>
