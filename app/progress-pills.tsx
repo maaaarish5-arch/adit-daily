@@ -1,12 +1,13 @@
 "use client";
 
 // The tappable pills under a student's note on Check-in.
-//   Phase 1 — Micro, Pharm, Renal, Respi
+//   Phase 1 — Foundation (Micro, Pharm, Renal, Respi), then the other 12 systems
 //   Phase 2 — all 16 First Aid systems
 //   Phase 3 and 4 — NBME 26 to 34 (plus a student's extra forms, see
-//   EXTRA_NBMES), each pill a bar filled to the score
-// Tapping one opens a small box asking for the % — a system is only marked
-// done once its average is in.
+//   EXTRA_NBMES), each pill a bar filled to the score, then all 16 systems
+// Every row reads the same record, so a system done in Phase 1 or 2 is still
+// done in Phase 3. Tapping a pill opens a small box asking for the % — a
+// system is only marked done once its average is in.
 
 import { useState } from "react";
 import {
@@ -21,10 +22,37 @@ type Kind = "sys" | "nbme";
 type Mode = "p1" | "p2" | "nbme";
 
 const HELP: Record<Mode, string> = {
-  p1: "Phase 1 is the foundation: Micro, Pharm, Renal and Respi. When the student finishes one, tap it and type their average for that system (%). Tap a done system to change the number or mark it not done.",
+  p1: "Phase 1 starts with the foundation: Micro, Pharm, Renal and Respi. The other 12 systems are in the row below. When the student finishes one, tap it and type their average for that system (%). Tap a done system to change the number or mark it not done.",
   p2: "Tap a system when the student has finished it, then type their average for that system (%). Systems ticked in Phase 1 are already here. Tap a done system to change the number or mark it not done.",
-  nbme: `Tap each NBME the student has taken and type their score (%). The bar fills to the score; the line marks ${NBME_TARGET}%. Tap a taken NBME to change the score or clear it.`,
+  nbme: `Tap each NBME the student has taken and type their score (%). The bar fills to the score; the line marks ${NBME_TARGET}%. Below, tap each system as the student revises it and type their average (%). Systems done in Phase 1 and 2 show their old average until a new one is typed. Tap a pill to change it or clear it.`,
 };
+
+type Item = { kind: Kind; key: string; label: string; short: string };
+
+const sysItem = (s: (typeof SYSTEMS)[number]): Item => ({
+  kind: "sys",
+  key: s.id,
+  label: s.name,
+  short: s.label,
+});
+
+/** The rows a mode shows, each with its own count. */
+function groupsFor(mode: Mode, nbmes: number[]): { title: string; items: Item[] }[] {
+  const all = { title: "Systems", items: SYSTEMS.map(sysItem) };
+  if (mode === "p1")
+    return [
+      { title: "Foundation", items: SYSTEMS.filter((s) => P1_SYSTEMS.includes(s.id)).map(sysItem) },
+      { title: "Systems", items: SYSTEMS.filter((s) => !P1_SYSTEMS.includes(s.id)).map(sysItem) },
+    ];
+  if (mode === "p2") return [all];
+  return [
+    {
+      title: "NBMEs",
+      items: nbmes.map((n) => ({ kind: "nbme", key: String(n), label: `NBME ${n}`, short: String(n) })),
+    },
+    all,
+  ];
+}
 
 export default function ProgressPills({
   name,
@@ -47,22 +75,14 @@ export default function ProgressPills({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
-  const items =
-    mode === "nbme"
-      ? nbmes.map((n) => ({ kind: "nbme" as Kind, key: String(n), label: `NBME ${n}`, short: String(n) }))
-      : SYSTEMS.filter((s) => mode === "p2" || P1_SYSTEMS.includes(s.id)).map((s) => ({
-          kind: "sys" as Kind,
-          key: s.id,
-          label: s.name,
-          short: s.label,
-        }));
+  const groups = groupsFor(mode, nbmes);
 
   const valueOf = (kind: Kind, key: string) =>
     (progress[kind] as Record<string, number | undefined>)[key];
-  const done = items.filter((i) => valueOf(i.kind, i.key) !== undefined).length;
+  const isOpen = (i: Item) => open?.kind === i.kind && open.key === i.key;
 
   const start = (kind: Kind, key: string, label: string) => {
-    if (open?.key === key) return setOpen(null);
+    if (open?.kind === kind && open.key === key) return setOpen(null);
     const v = valueOf(kind, key);
     setOpen({ kind, key, label });
     setValue(v === undefined ? "" : String(v));
@@ -81,96 +101,108 @@ export default function ProgressPills({
   const typed = cleanPct(value);
   const current = open ? valueOf(open.kind, open.key) : undefined;
 
+  const editor = open && (
+    <div className="prog-edit">
+      <span>
+        {open.kind === "nbme" ? `${open.label} score` : `${open.label} average`} for {name || "this student"}
+      </span>
+      <span className="prog-input">
+        <input
+          type="number"
+          inputMode="decimal"
+          min={0}
+          max={100}
+          step="any"
+          autoFocus
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && typed !== null) commit(typed);
+            if (e.key === "Escape") setOpen(null);
+          }}
+          placeholder="__"
+          aria-label={`${open.label} percentage`}
+        />
+        %
+      </span>
+      <button disabled={busy || typed === null} onClick={() => typed !== null && commit(typed)}>
+        {current === undefined ? "Mark done" : "Save"}
+      </button>
+      {current !== undefined && (
+        <button disabled={busy} onClick={() => commit(null)}>
+          {open.kind === "nbme" ? "Not taken" : "Not done"}
+        </button>
+      )}
+      <button className="prog-cancel" disabled={busy} onClick={() => setOpen(null)}>
+        Cancel
+      </button>
+      {value !== "" && typed === null && <span className="prog-err">0 to 100</span>}
+      {error && <span className="prog-err">{error}</span>}
+    </div>
+  );
+
   return (
     <div className="prog" data-mode={mode}>
-      <div className="prog-head">
-        <span>
-          {mode === "nbme" ? "NBMEs" : mode === "p1" ? "Foundation" : "Systems"} done{" "}
-          <b>
-            {done}/{items.length}
-          </b>
-        </span>
-        <button
-          className="prog-q"
-          aria-expanded={help}
-          aria-label="What do I do here?"
-          onClick={() => setHelp((v) => !v)}
-        >
-          ?
-        </button>
-      </div>
-      {help && <p className="prog-help">{HELP[mode]}</p>}
-
-      <div className="prog-pills">
-        {items.map((i) => {
-          const v = valueOf(i.kind, i.key);
-          const on = v !== undefined;
-          return (
-            <button
-              key={i.key}
-              className="pill"
-              data-kind={i.kind}
-              data-on={String(on)}
-              data-open={String(open?.key === i.key)}
-              data-pass={String(on && v >= NBME_TARGET)}
-              aria-label={`${i.label}${on ? ` — ${v}%` : " — not done"}`}
-              title={`${i.label}${on ? ` · ${v}%` : ""}`}
-              onClick={() => start(i.kind, i.key, i.label)}
-            >
-              {i.kind === "nbme" && (
-                <>
-                  <i className="pill-fill" style={{ width: `${on ? v : 0}%` }} />
-                  <i className="pill-target" style={{ left: `${NBME_TARGET}%` }} />
-                </>
-              )}
-              <span className="pill-txt">
-                {i.short}
-                {on && <em>{v}%</em>}
+      {groups.map((g, gi) => {
+        const done = g.items.filter((i) => valueOf(i.kind, i.key) !== undefined).length;
+        return (
+          <div className="prog-group" key={g.title}>
+            <div className="prog-head">
+              <span>
+                {g.title} done{" "}
+                <b>
+                  {done}/{g.items.length}
+                </b>
               </span>
-            </button>
-          );
-        })}
-      </div>
+              {gi === 0 && (
+                <button
+                  className="prog-q"
+                  aria-expanded={help}
+                  aria-label="What do I do here?"
+                  onClick={() => setHelp((v) => !v)}
+                >
+                  ?
+                </button>
+              )}
+            </div>
+            {gi === 0 && help && <p className="prog-help">{HELP[mode]}</p>}
 
-      {open && (
-        <div className="prog-edit">
-          <span>
-            {open.kind === "nbme" ? `${open.label} score` : `${open.label} average`} for {name || "this student"}
-          </span>
-          <span className="prog-input">
-            <input
-              type="number"
-              inputMode="decimal"
-              min={0}
-              max={100}
-              step="any"
-              autoFocus
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && typed !== null) commit(typed);
-                if (e.key === "Escape") setOpen(null);
-              }}
-              placeholder="__"
-              aria-label={`${open.label} percentage`}
-            />
-            %
-          </span>
-          <button disabled={busy || typed === null} onClick={() => typed !== null && commit(typed)}>
-            {current === undefined ? "Mark done" : "Save"}
-          </button>
-          {current !== undefined && (
-            <button disabled={busy} onClick={() => commit(null)}>
-              {open.kind === "nbme" ? "Not taken" : "Not done"}
-            </button>
-          )}
-          <button className="prog-cancel" disabled={busy} onClick={() => setOpen(null)}>
-            Cancel
-          </button>
-          {value !== "" && typed === null && <span className="prog-err">0 to 100</span>}
-          {error && <span className="prog-err">{error}</span>}
-        </div>
-      )}
+            <div className="prog-pills">
+              {g.items.map((i) => {
+                const v = valueOf(i.kind, i.key);
+                const on = v !== undefined;
+                return (
+                  <button
+                    key={i.key}
+                    className="pill"
+                    data-kind={i.kind}
+                    data-on={String(on)}
+                    data-open={String(isOpen(i))}
+                    data-pass={String(on && v >= NBME_TARGET)}
+                    aria-label={`${i.label}${on ? ` — ${v}%` : " — not done"}`}
+                    title={`${i.label}${on ? ` · ${v}%` : ""}`}
+                    onClick={() => start(i.kind, i.key, i.label)}
+                  >
+                    {i.kind === "nbme" && (
+                      <>
+                        <i className="pill-fill" style={{ width: `${on ? v : 0}%` }} />
+                        <i className="pill-target" style={{ left: `${NBME_TARGET}%` }} />
+                      </>
+                    )}
+                    <span className="pill-txt">
+                      {i.short}
+                      {on && <em>{v}%</em>}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* the box opens under the row its pill is in */}
+            {g.items.some(isOpen) && editor}
+          </div>
+        );
+      })}
     </div>
   );
 }

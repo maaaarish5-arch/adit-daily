@@ -2251,6 +2251,10 @@ select.cell {
   color: var(--bone-dim);
 }
 
+.prog-group + .prog-group {
+  margin-top: 0.5rem;
+}
+
 .prog-pills {
   display: flex;
   flex-wrap: wrap;
