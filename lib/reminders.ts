@@ -121,6 +121,16 @@ function rowsFor(
 const byKind = (a: Reminder, b: Reminder) =>
   ORDER.indexOf(a.kind) - ORDER.indexOf(b.kind) || a.title.localeCompare(b.title);
 
+/** Everything falling on one day, done or not. */
+export function remindersOn(
+  students: Student[],
+  todos: Todo[],
+  meetings: Meeting[],
+  day: string,
+): Reminder[] {
+  return rowsFor(students, todos, meetings).filter((r) => r.day === day).sort(byKind);
+}
+
 /**
  * Overdue (open items before today) plus every day from today to the horizon
  * that has something on it. Today is always listed, even when empty.

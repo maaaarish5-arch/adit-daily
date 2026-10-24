@@ -25,7 +25,9 @@ const readKey = (k: string) => {
   }
 };
 
-export default function RemindersView() {
+/** Roster, to-dos and (when unlocked) sales meetings, reloaded on focus, plus
+ *  a tick for to-do rows. Shared by this page and the panel on top of the corner. */
+export function useReminderData() {
   const [today, setToday] = useState<string | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -33,9 +35,6 @@ export default function RemindersView() {
   const [salesOn, setSalesOn] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sync, setSync] = useState<SyncState>("idle");
-  const [newDay, setNewDay] = useState("");
-  const [newText, setNewText] = useState("");
-
   const load = useCallback(() => {
     setToday(todayKey());
     const sales = readKey(SALES_KEY);
@@ -94,6 +93,15 @@ export default function RemindersView() {
         t.id === r.todoId ? { ...t, done: !t.done, doneAt: t.done ? "" : new Date().toISOString() } : t
       )
     );
+
+  return { today, students, todos, meetings, salesOn, loading, sync, writeTodos, toggle };
+}
+
+export default function RemindersView() {
+  const { today, students, todos, meetings, salesOn, loading, sync, writeTodos, toggle } =
+    useReminderData();
+  const [newDay, setNewDay] = useState("");
+  const [newText, setNewText] = useState("");
 
   const add = () => {
     const title = newText.trim();
