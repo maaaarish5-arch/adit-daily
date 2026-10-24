@@ -6,6 +6,7 @@ import CheckinView from "./checkin-view";
 import SalesView from "./sales-view";
 import TrackersView from "./trackers-view";
 import TodosView from "./todos-view";
+import RemindersView from "./reminders-view";
 import CornerView from "./corner-view";
 import { Sop } from "./sop";
 import { CORNERS, type CornerId } from "@/lib/corners";
@@ -74,6 +75,8 @@ export default function Page() {
   const [date, setDate] = useState<string | null>(null);
 
   const [tab, setTab] = useState<Tab>("today");
+  // Adit's Corner has two pages: the daily checklist and Reminders.
+  const [aditPage, setAditPage] = useState<"daily" | "reminders">("daily");
   const [ticks, setTicks] = useState<Ticks>({});
   const [notes, setNotes] = useState("");
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -676,7 +679,20 @@ export default function Page() {
         </div>
       )}
 
-      {CORNERS.some((c) => c.id === tab) ? (
+      {tab === "adit" && (
+        <nav className="subtabs">
+          <button data-on={String(aditPage === "daily")} onClick={() => setAditPage("daily")}>
+            Daily
+          </button>
+          <button data-on={String(aditPage === "reminders")} onClick={() => setAditPage("reminders")}>
+            Reminders
+          </button>
+        </nav>
+      )}
+
+      {tab === "adit" && aditPage === "reminders" ? (
+        <RemindersView />
+      ) : CORNERS.some((c) => c.id === tab) ? (
         <CornerView
           key={tab}
           corner={CORNERS.find((c) => c.id === tab)!}
