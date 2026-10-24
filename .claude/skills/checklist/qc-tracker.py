@@ -14,6 +14,7 @@ import datetime
 import json
 import re
 import sys
+import urllib.error
 import urllib.request
 
 SITE = "https://usmlevault-daily.vercel.app"
@@ -191,9 +192,19 @@ def main():
     if len(sys.argv) < 2:
         print(__doc__)
         return 2
-    plan_doc, problems = check_local(sys.argv[1])
+    try:
+        plan_doc, problems = check_local(sys.argv[1])
+    except FileNotFoundError:
+        problems, plan_doc = [f"file not found: {sys.argv[1]}"], None
+    except json.JSONDecodeError as e:
+        problems, plan_doc = [f"the file is not valid JSON ({e})"], None
     if len(sys.argv) > 2 and not problems:
-        problems += check_live(plan_doc, sys.argv[2])
+        try:
+            problems += check_live(plan_doc, sys.argv[2])
+        except urllib.error.HTTPError as e:
+            problems.append(f"live page: the site answered {e.code} for token {sys.argv[2]!r} (not published, or wrong token)")
+        except (urllib.error.URLError, OSError) as e:
+            problems.append(f"live page: could not reach {SITE} ({e}). Check the internet and run again")
     if problems:
         print("QC FAILED. Do not send the link:")
         for p in problems:

@@ -188,6 +188,11 @@
                       "key": "renal"
                     },
                     "split": "uworld"
+                  },
+                  {
+                    "id": "d5-1-ss",
+                    "text": "Send all the screenshots of the blocks in the group",
+                    "meta": ""
                   }
                 ]
               }
