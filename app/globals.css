@@ -1575,9 +1575,14 @@ select.cell {
   border-color: var(--bone-dim);
 }
 .phase-toggle button[data-on="true"][data-phase="5"] {
-  color: var(--signal);
-  background: transparent;
-  border-color: var(--signal);
+  color: var(--ink);
+  background: #e8a0bf;
+  border-color: #e8a0bf;
+}
+.phase-toggle button[data-on="true"][data-phase="6"] {
+  color: var(--ink);
+  background: #8ec5ee;
+  border-color: #8ec5ee;
 }
 
 .phase-left {
@@ -1828,7 +1833,12 @@ select.cell {
   color: var(--bone);
 }
 .band.phase-5 {
-  color: var(--signal-deep);
+  color: #e8a0bf;
+  border-bottom-color: rgba(232, 160, 191, 0.6);
+}
+.band.phase-6 {
+  color: #8ec5ee;
+  border-bottom-color: rgba(142, 197, 238, 0.6);
 }
 
 /* inside a band: where the students it is late night for begin */
@@ -1852,6 +1862,14 @@ select.cell {
 .checkin-row .phase-tag[data-phase="3"] {
   color: var(--rust);
   border-color: rgba(192, 87, 59, 0.6);
+}
+.checkin-row .phase-tag[data-phase="5"] {
+  color: #e8a0bf;
+  border-color: rgba(232, 160, 191, 0.6);
+}
+.checkin-row .phase-tag[data-phase="6"] {
+  color: #8ec5ee;
+  border-color: rgba(142, 197, 238, 0.6);
 }
 .checkin-row .phase-tag[data-phase="1"] {
   color: var(--signal);

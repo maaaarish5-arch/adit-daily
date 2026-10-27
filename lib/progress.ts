@@ -89,11 +89,12 @@ export function cleanProgress(raw: unknown): Progress {
   return out;
 }
 
-/** Which pills a phase shows: Phase 1 the foundation, then the other systems;
- *  Phase 2 all 16 systems; Phase 3 and 4 the NBMEs, then all 16 systems as
- *  they are revised (the same record, so Phase 1–2 averages carry over). */
+/** Which pills a phase shows: Phase 1 and Trial the foundation, then the other
+ *  systems; Phase 2 all 16 systems; Phase 3 and 4 the NBMEs, then all 16
+ *  systems as they are revised (the same record, so Phase 1–2 averages carry
+ *  over). */
 export function pillsFor(phase: Phase): "p1" | "p2" | "nbme" | null {
-  if (phase === 1) return "p1";
+  if (phase === 1 || phase === 6) return "p1";
   if (phase === 2) return "p2";
   if (phase === 3 || phase === 4) return "nbme";
   return null;

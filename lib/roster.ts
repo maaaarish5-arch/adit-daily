@@ -58,10 +58,12 @@ export function monthsAgo(month: string, now: number): number {
 //       A Phase 3 student can carry an exam date too; a week before it they
 //       read as Phase 4 on their own (or are moved by hand any time).
 //   5 — Match. Stored as 5 but always shown as "M", never "Phase 5".
+//   6 — Trial. Stored as 6 but always shown as "T", never "Phase 6". No clock:
+//       a trial student stays here until moved by hand.
 // Phase 1 lasts two weeks, then the student drops to Phase 2 on their own.
 // Students stored as 4 before 5 Oct 2026 were "E/M"; they now read as Phase 4.
 
-export const PHASES = [1, 2, 3, 4, 5] as const;
+export const PHASES = [1, 2, 3, 4, 5, 6] as const;
 export type Phase = (typeof PHASES)[number];
 
 export const PHASE_LABELS: Record<Phase, string> = {
@@ -70,24 +72,26 @@ export const PHASE_LABELS: Record<Phase, string> = {
   3: "NBME",
   4: "Exam date set",
   5: "Match",
+  6: "Trial",
 };
 
-/** The short tag on the toggle buttons: P1, P2, P3, P4, M. */
+/** The short tag on the toggle buttons: P1, P2, P3, P4, M, T. */
 export const PHASE_TAGS: Record<Phase, string> = {
   1: "P1",
   2: "P2",
   3: "P3",
   4: "P4",
   5: "M",
+  6: "T",
 };
 
-/** Full name for filters and tooltips: "Phase 1 · New student", or "Match phase". */
+/** Full name for filters and tooltips: "Phase 1 · New student", "Match phase" or "Trial phase". */
 export function phaseName(p: Phase): string {
-  return p === 5 ? `${PHASE_LABELS[5]} phase` : `Phase ${p} · ${PHASE_LABELS[p]}`;
+  return p === 5 || p === 6 ? `${PHASE_LABELS[p]} phase` : `Phase ${p} · ${PHASE_LABELS[p]}`;
 }
 
 /** Priority order, highest first — how the check-in list is stacked. */
-export const PHASE_PRIORITY: Phase[] = [4, 3, 1, 2, 5];
+export const PHASE_PRIORITY: Phase[] = [4, 3, 1, 6, 2, 5];
 
 export const PHASE1_DAYS = 14;
 
