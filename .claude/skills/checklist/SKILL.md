@@ -320,8 +320,8 @@ weighted by questions, the way UWorld calculates it.
   - Never on Anki, Amboss, Marrow, FA Guide or video tasks.
 - **NBME pill = that form's score.** An NBME form task (26–34) carries
   `"split": "nbme"` and `"score": {"kind":"nbme","key":"31"}`.
-  - Exception: **Manthan** (id `csv045`) also has an NBME 13 pill, so his NBME 13
-    task gets `"score": {"kind":"nbme","key":"13"}`. For anyone else NBME 13 is
+  - Exception: **Manthan** (id `csv045`) also has NBME 13 and 14 pills, so his NBME 13 or 14
+    task gets `"score": {"kind":"nbme","key":"13"}` (or `"14"`). For anyone else NBME 13 is
     an older form: no `score`. (Extra forms per student: `EXTRA_NBMES` in
     `lib/progress.ts`.)
   - NBME 20–25, Free 120, UWSA and other formal assessments get `split: "nbme"`
