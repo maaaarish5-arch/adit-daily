@@ -1804,6 +1804,24 @@ select.cell {
   font-weight: 500;
 }
 
+/* the arrow that folds a phase band's students up or down */
+.band-toggle {
+  display: inline-block;
+  margin-right: 0.5rem;
+  padding: 0 0.3rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.band-toggle[data-open="false"] {
+  transform: rotate(-90deg);
+}
+
 .band.left,
 .band.archived {
   color: var(--rust);

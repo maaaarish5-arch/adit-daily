@@ -25,6 +25,7 @@ import {
 } from "@/lib/roster";
 import {
   BANDS,
+  DND_BAND,
   activeRows,
   buildRows,
   entryFor,
@@ -60,6 +61,29 @@ export default function CheckinView() {
   const [phase, setPhase] = useState("all");
   const [openOnly, setOpenOnly] = useState(false);
   const [query, setQuery] = useState("");
+  // Phase bands folded shut, by band rank. Remembered on this device; the
+  // Do not disturb band is left out on purpose — it starts shut every time.
+  const FOLD_KEY = "adit:checkin-folded";
+  const [folded, setFolded] = useState<number[]>([]);
+  const [dndBandOpen, setDndBandOpen] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(FOLD_KEY) ?? "[]");
+      if (Array.isArray(saved)) setFolded(saved.filter((x) => typeof x === "number"));
+    } catch {
+      // Storage blocked or corrupt: every phase starts open.
+    }
+  }, []);
+  const toggleFold = (rank: number) => {
+    if (rank === DND_BAND) return setDndBandOpen((o) => !o);
+    const next = folded.includes(rank) ? folded.filter((x) => x !== rank) : [...folded, rank];
+    setFolded(next);
+    try {
+      localStorage.setItem(FOLD_KEY, JSON.stringify(next));
+    } catch {
+      // Could not save; the fold still works for this visit.
+    }
+  };
   const [copied, setCopied] = useState(false);
   /** The student whose DND length picker is open, if any. */
   const [dndOpen, setDndOpen] = useState<string | null>(null);
@@ -562,16 +586,33 @@ export default function CheckinView() {
           const e = entryFor(entries, r.id);
           const rank = rankOf(r);
           let band = null;
+          // Phase bands, and the Do not disturb band, can fold shut.
+          const foldable = (rank >= 1 && rank <= PHASE_PRIORITY.length) || rank === DND_BAND;
+          const open = rank === DND_BAND ? dndBandOpen : !folded.includes(rank);
           if (rank !== lastRank && BANDS[rank]) {
             const n = visible.filter((x) => rankOf(x) === rank).length;
             band = (
               <div className={`band ${BANDS[rank].cls}`} key={`band-${rank}`}>
+                {foldable && (
+                  <button
+                    type="button"
+                    className="band-toggle"
+                    data-open={String(open)}
+                    aria-expanded={open}
+                    aria-label={`${open ? "Collapse" : "Expand"} ${BANDS[rank].label}`}
+                    onClick={() => toggleFold(rank)}
+                  >
+                    ▾
+                  </button>
+                )}
                 {BANDS[rank].label} <b>{n}</b>
               </div>
             );
           }
           if (band) lastNight = false;
           lastRank = rank;
+          // Folded: the header stays, the students under it are hidden.
+          if (foldable && !open) return band;
           // Inside a band, the students it is 11 PM – 6 AM for come last, under
           // their own line.
           const night = Boolean(now && lateNight(r.tz, now));

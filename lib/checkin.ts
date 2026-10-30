@@ -62,6 +62,9 @@ export type Row = Student & { archived?: boolean; dnd?: boolean; rest?: boolean 
  *  first, 11 PM – 6 AM there last (see messageOrder) — then newest join month. */
 const P = PHASE_PRIORITY.length;
 
+/** Band rank of the Do not disturb band, the one after the phases. */
+export const DND_BAND = P + 1;
+
 export function rankOf(s: Row): number {
   if (s.archived) return P + 7;
   if (s.status === "Left") return P + 6;
