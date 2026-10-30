@@ -11,11 +11,15 @@
 // whoever has the link). Nothing a student does can change the plan.
 //
 // Open-ended tasks carry a `split` kind, and the student says how much they're
-// doing. UWorld and NBME split into blocks (50 questions, 20 per block: Block 1
-// · 20, Block 2 · 20, Block 3 · 10), each with its own score; the progress pill
-// on Check-in is the running average across every scored block, weighted by
-// questions. Reading, flashcards and videos only record the amount (120 pages,
-// 6 videos) for reference. They stay one tick; nobody ticks off every video.
+// doing. UWorld, NBME and assessments (Vault Assessment, UWSA) split into blocks
+// (50 questions, 20 per block: Block 1 · 20, Block 2 · 20, Block 3 · 10), each
+// with its own score; the progress pill on Check-in is the running average
+// across every scored block, weighted by questions. An assessment has no pill,
+// but its blocks still take scores. When the plan already says how an
+// assessment is split ("2 blocks of 20 questions") its blocks show straight
+// away (`preset`); otherwise the student is asked. Reading, flashcards and
+// videos only record the amount (120 pages, 6 videos) for reference. They stay
+// one tick; nobody ticks off every video.
 
 import { ALL_NBMES, SYSTEMS, cleanPct } from "./progress";
 
@@ -41,16 +45,20 @@ export const EMPTY_STATE: TrackerState = { done: {}, setup: {}, skip: {}, update
 
 /* ------------------------------ split tasks ------------------------------ */
 
-export const SPLIT_KINDS = ["uworld", "nbme", "pages", "cards", "videos"] as const;
+export const SPLIT_KINDS = ["uworld", "nbme", "assessment", "pages", "cards", "videos"] as const;
 export type SplitKind = (typeof SPLIT_KINDS)[number];
 
 type SplitSpec = {
   /** What the student is asked: two questions for blocks, one for the rest. */
   ask: [string] | [string, string];
-  /** Per-block score boxes. */
+  /** Per-block score boxes. They take scores whether or not the task feeds a
+   *  progress pill. */
   scored: boolean;
   /** Only records the amount. The task stays one tick, with no parts. */
   info: boolean;
+  /** The first answer is a number of blocks (NBME, assessments), not a total
+   *  number of questions (UWorld). */
+  byBlocks: boolean;
   /** "pages", "cards", "videos": how the amount reads back. */
   noun: string;
   /** Biggest first answer, and biggest second (chunk) answer. */
@@ -59,11 +67,12 @@ type SplitSpec = {
 };
 
 export const SPLITS: Record<SplitKind, SplitSpec> = {
-  uworld: { ask: ["Total questions", "Questions per block"], scored: true, info: false, noun: "questions", maxA: 4000, maxB: 40 },
-  nbme: { ask: ["Number of blocks", "Questions per block"], scored: true, info: false, noun: "questions", maxA: 8, maxB: 60 },
-  pages: { ask: ["Pages"], scored: false, info: true, noun: "pages", maxA: 5000, maxB: 0 },
-  cards: { ask: ["Cards"], scored: false, info: true, noun: "cards", maxA: 50000, maxB: 0 },
-  videos: { ask: ["Videos"], scored: false, info: true, noun: "videos", maxA: 500, maxB: 0 },
+  uworld: { ask: ["Total questions", "Questions per block"], scored: true, info: false, byBlocks: false, noun: "questions", maxA: 4000, maxB: 40 },
+  nbme: { ask: ["Number of blocks", "Questions per block"], scored: true, info: false, byBlocks: true, noun: "questions", maxA: 8, maxB: 60 },
+  assessment: { ask: ["Number of blocks", "Questions per block"], scored: true, info: false, byBlocks: true, noun: "questions", maxA: 10, maxB: 60 },
+  pages: { ask: ["Pages"], scored: false, info: true, byBlocks: false, noun: "pages", maxA: 5000, maxB: 0 },
+  cards: { ask: ["Cards"], scored: false, info: true, byBlocks: false, noun: "cards", maxA: 50000, maxB: 0 },
+  videos: { ask: ["Videos"], scored: false, info: true, byBlocks: false, noun: "videos", maxA: 500, maxB: 0 },
 };
 
 /** No task splits into more than this many units. */
@@ -83,7 +92,7 @@ export function makeSetup(kind: SplitKind, a: unknown, b: unknown): Setup | stri
   if (!y) return `Enter ${(spec.ask[1] ?? "").toLowerCase()} as a whole number`;
   if (x > spec.maxA) return `${spec.ask[0]} can be at most ${spec.maxA}`;
   if (y > spec.maxB) return `${spec.ask[1]} can be at most ${spec.maxB}`;
-  const setup = kind === "nbme" ? { total: x * y, per: y } : { total: x, per: Math.min(y, x) };
+  const setup = spec.byBlocks ? { total: x * y, per: y } : { total: x, per: Math.min(y, x) };
   const count = Math.ceil(setup.total / setup.per);
   if (count > MAX_UNITS) {
     return `That makes ${count} blocks and the most is ${MAX_UNITS}. Use bigger blocks.`;
@@ -93,7 +102,14 @@ export function makeSetup(kind: SplitKind, a: unknown, b: unknown): Setup | stri
 
 /** A setup as the student's two answers again, for editing it. */
 export function setupAnswers(kind: SplitKind, s: Setup): [number, number] {
-  return kind === "nbme" ? [Math.ceil(s.total / s.per), s.per] : [s.total, s.per];
+  return SPLITS[kind].byBlocks ? [Math.ceil(s.total / s.per), s.per] : [s.total, s.per];
+}
+
+/** How a task is divided right now: the student's own answers if they gave
+ *  any, else what the plan says (`preset`), else not at all. */
+export function setupFor(task: { id: string; preset?: Preset | null }, state: Pick<TrackerState, "setup">): Setup | undefined {
+  const p = task.preset;
+  return state.setup[task.id] ?? (p ? { total: p.blocks * p.per, per: p.per } : undefined);
 }
 
 export type Unit = {
@@ -120,8 +136,11 @@ export function unitsOf(task: { id: string; split: SplitKind | null }, setup: Se
 
 /** How much of a task is done, 0 to 1. A split task counts its units. */
 export function taskShare(task: TrackerTask, state: TrackerState): number {
-  const units = unitsOf(task, state.setup[task.id]);
-  if (!units.length) return state.done[task.id] ? 1 : 0;
+  // Blocks can't be ticked as a whole, so a tick on the task itself was made
+  // while it was still a single tick (an assessment from before it had blocks).
+  if (state.done[task.id]) return 1;
+  const units = unitsOf(task, setupFor(task, state));
+  if (!units.length) return 0;
   return units.filter((u) => state.done[u.id]).length / units.length;
 }
 
@@ -136,7 +155,7 @@ export function pillValue(
   let weight = 0;
   for (const t of allTasks(tracker)) {
     if (!t.score || t.score.kind !== link.kind || t.score.key !== link.key) continue;
-    const units = unitsOf(t, state.setup[t.id]);
+    const units = unitsOf(t, setupFor(t, state));
     if (units.length) {
       for (const u of units) {
         const s = state.done[u.id]?.score;
@@ -168,7 +187,13 @@ export type TrackerTask = {
   score: ScoreLink | null;
   /** Open-ended work the student sizes themselves; see SPLITS. */
   split: SplitKind | null;
+  /** How the plan itself divides a task into blocks ("2 blocks of 20
+   *  questions"), so they show without asking. The student can still change it. */
+  preset: Preset | null;
 };
+
+/** What a plan says about a task's blocks: `blocks` blocks of `per` questions. */
+export type Preset = { blocks: number; per: number };
 
 /** "Morning · as soon as you wake up", "By end of day" — or no label. */
 export type TrackerBlock = { label: string; tasks: TrackerTask[] };
@@ -255,6 +280,33 @@ export function cleanScoreLink(v: unknown): ScoreLink | null {
 /** Problems that make a plan unpublishable, in words the skill can act on. */
 export class TrackerError extends Error {}
 
+/** A task that is a Vault Assessment or a UWSA. Plans published before the
+ *  "assessment" split existed have these as plain ticks. */
+const ASSESSMENT_RE = /^(?:(?:vault|uworld)\s+(?:self[- ]?)?assessment|uwsa)\b/i;
+/** "2 blocks of 20 questions", "2 blocks of 20 Qs". */
+const BLOCKS_OF_RE = /\b(\d+)\s*blocks?\s*(?:of|×|x)\s*(\d+)\s*(?:questions?|qs?|mcqs?)\b/i;
+
+/** The plan's own split of a task, from an explicit `preset: { blocks, per }`
+ *  or, for an assessment, from the text ("2 blocks of 20 questions"). Null when
+ *  the plan doesn't say, and the student is asked. */
+function presetOf(kind: SplitKind, raw: unknown, text: string, where: string): Preset | null {
+  if (!SPLITS[kind].byBlocks) return null;
+  const preset = (blocks: unknown, per: unknown) => {
+    const made = makeSetup(kind, blocks, per);
+    return typeof made === "string" ? made : { blocks: made.total / made.per, per: made.per };
+  };
+  if (raw !== undefined && raw !== null) {
+    const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+    const made = preset(r.blocks, r.per);
+    if (typeof made === "string") throw new TrackerError(`${where}: preset needs whole numbers "blocks" and "per". ${made}`);
+    return made;
+  }
+  if (kind !== "assessment") return null;
+  const m = BLOCKS_OF_RE.exec(text);
+  const made = m ? preset(m[1], m[2]) : null;
+  return typeof made === "string" ? null : made;
+}
+
 /** Sanitise a plan coming from the skill. Task ids are kept if given (so a
  *  re-published plan keeps its ticks) and filled in where missing. */
 export function cleanPlan(raw: unknown): Omit<
@@ -300,8 +352,10 @@ export function cleanPlan(raw: unknown): Omit<
                 let id = str(tr.id, 40).replace(/[^\w-]/g, "") || `t${n}`;
                 while (ids.has(id)) id = `${id}x`;
                 ids.add(id);
-                const split = SPLIT_KINDS.includes(tr.split as SplitKind) ? (tr.split as SplitKind) : null;
-                return { id, text, meta: str(tr.meta, 300), score: cleanScoreLink(tr.score), split };
+                let split = SPLIT_KINDS.includes(tr.split as SplitKind) ? (tr.split as SplitKind) : null;
+                if (!split && ASSESSMENT_RE.test(text)) split = "assessment";
+                const preset = split ? presetOf(split, tr.preset, text, `${where}, task ${id}`) : null;
+                return { id, text, meta: str(tr.meta, 300), score: cleanScoreLink(tr.score), split, preset };
               }),
             };
           }),

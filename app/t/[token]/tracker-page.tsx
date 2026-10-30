@@ -5,12 +5,14 @@
 // saved on the server, so the student, Adit and Dr. Marish all see the same
 // progress.
 //
-// UWorld and NBME tasks ask the student how much they're doing (total
-// questions, questions per block) and split into blocks as they type. Each
-// block takes a score; the server keeps the Check-in pill at the running
-// average. Reading, flashcards and videos just ask "how many?" for reference
-// and stay a single tick. That question is optional: × closes it for good,
-// leaving an "Add count" link.
+// UWorld, NBME and assessment tasks ask the student how much they're doing
+// (total questions or number of blocks, questions per block) and split into
+// blocks as they type. When the plan already says ("2 blocks of 20 questions")
+// the blocks show straight away and nothing is asked. Each block takes a
+// score; the server keeps the Check-in pill at the running average (an
+// assessment has no pill). Reading, flashcards and videos just ask "how
+// many?" for reference and stay a single tick. That question is optional: ×
+// closes it for good, leaving an "Add count" link.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -21,6 +23,7 @@ import {
   pillValue,
   scorePrompt,
   setupAnswers,
+  setupFor,
   spanDays,
   taskShare,
   unitsOf,
@@ -402,7 +405,8 @@ function TaskRow({
   send: Send;
   where: string;
 }) {
-  const setup = state.setup[task.id];
+  const setup = setupFor(task, state);
+  const own = Boolean(state.setup[task.id]);
   const units = unitsOf(task, setup);
   const share = taskShare(task, state);
   const on = share === 1;
@@ -427,7 +431,7 @@ function TaskRow({
     if (setup || skipped) return;
     send({ taskId: task.id, skip: true }, (s) => ({ ...s, skip: { ...s.skip, [task.id]: true } }));
   };
-  const scored = Boolean(split && SPLITS[split].scored && task.score);
+  const scored = Boolean(split && SPLITS[split].scored);
   const scoredUnits = units.filter((u) => state.done[u.id]?.score !== undefined);
   const avg = scoredUnits.length
     ? Math.round(
@@ -479,6 +483,7 @@ function TaskRow({
             taskId={task.id}
             where={where}
             current={setup ?? null}
+            own={own}
             hasMarks={units.some((u) => state.done[u.id])}
             send={send}
             onFocusIn={() => setEditing(true)}
@@ -554,6 +559,7 @@ function SetupForm({
   taskId,
   where,
   current,
+  own,
   hasMarks,
   send,
   onFocusIn,
@@ -564,6 +570,9 @@ function SetupForm({
   taskId: string;
   where: string;
   current: { total: number; per: number } | null;
+  /** The student set `current` themselves. If the plan did, there is nothing
+   *  of theirs to reset. */
+  own: boolean;
   hasMarks: boolean;
   send: Send;
   /** The form stays open while it has focus, so blocks can appear below it as
@@ -677,9 +686,11 @@ function SetupForm({
       )}
       {current && (
         <div className="trk-setup-acts">
-          <button className="trk-link" onClick={reset}>
-            Reset
-          </button>
+          {own && (
+            <button className="trk-link" onClick={reset}>
+              Reset
+            </button>
+          )}
           <button className="trk-link" onClick={onDone}>
             Done
           </button>
@@ -692,6 +703,7 @@ function SetupForm({
 function intro(kind: SplitKind): string {
   if (kind === "uworld") return "How many UWorld questions are you doing?";
   if (kind === "nbme") return "How is this NBME split?";
+  if (kind === "assessment") return "How is this assessment split?";
   if (kind === "pages") return "How many pages is this?";
   if (kind === "cards") return "How many cards is this?";
   return "How many videos is this?";

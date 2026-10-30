@@ -110,6 +110,9 @@ export async function POST(req: Request) {
         .filter((t) => t.score)
         .map((t) => `${t.text} → ${t.score!.kind === "sys" ? `${t.score!.key} UWorld avg` : `NBME ${t.score!.key}`}`),
       splitTasks: tasks.filter((t) => t.split).map((t) => `${t.text} → ${t.split}`),
+      presetTasks: tasks
+        .filter((t) => t.preset)
+        .map((t) => `${t.text} → ${t.preset!.blocks} block${t.preset!.blocks === 1 ? "" : "s"} of ${t.preset!.per}`),
       replaced: Boolean(previous),
     };
     if (body.dryRun === true) return NextResponse.json({ dryRun: true, ...check });

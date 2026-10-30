@@ -5,6 +5,7 @@ import {
   allTasks,
   makeSetup,
   pillValue,
+  setupFor,
   unitsOf,
   type ScoreLink,
   type TaskMark,
@@ -103,7 +104,7 @@ export async function POST(req: Request, { params }: Ctx) {
         // keeps the ticks on blocks that still exist; a new chunk size means
         // the old blocks no longer match, so their ticks and scores go.
         if (!task.split) return fail(400, "this task can't be split");
-        const before = unitsOf(task, current.setup[task.id]);
+        const before = unitsOf(task, setupFor(task, current));
         if (body.setup === null) {
           delete next.setup[task.id];
           before.forEach((u) => delete next.done[u.id]);
@@ -111,7 +112,7 @@ export async function POST(req: Request, { params }: Ctx) {
           const raw = body.setup as Record<string, unknown>;
           const made = makeSetup(task.split, raw?.a, raw?.b);
           if (typeof made === "string") return fail(400, made);
-          const keep = current.setup[task.id]?.per === made.per;
+          const keep = setupFor(task, current)?.per === made.per;
           next.setup[task.id] = made;
           delete next.skip[task.id];
           const after = new Set(unitsOf(task, made).map((u) => u.id));
@@ -119,14 +120,15 @@ export async function POST(req: Request, { params }: Ctx) {
         }
         link = task.score;
       } else if (unit !== undefined) {
-        const u = unitsOf(task, current.setup[task.id])[(unit as number) - 1];
+        // Every block takes a score, whether or not the task feeds a pill
+        // (an assessment doesn't); `link` below is what decides the pill.
+        const u = unitsOf(task, setupFor(task, current))[(unit as number) - 1];
         if (!u) return fail(404, "not found");
-        if (hasScore && !task.score) return fail(400, "this task doesn't take scores");
         if (done === false) delete next.done[u.id];
         else mark(u.id);
         link = task.score;
       } else {
-        if (unitsOf(task, current.setup[task.id]).length) {
+        if (unitsOf(task, setupFor(task, current)).length) {
           return fail(400, "tick this task's parts instead");
         }
         if (hasScore && !task.score) return fail(400, "this task doesn't take scores");
