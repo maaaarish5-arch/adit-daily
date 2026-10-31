@@ -5,6 +5,7 @@ import {
   PHASE_PRIORITY,
   currentPhase,
   monthsAgo,
+  onCheckin,
   summarise,
   type Payment,
   type Status,
@@ -28,6 +29,7 @@ export function isSortKey(v: unknown): v is SortKey {
 /** The group order for the "status" sort, Left last. */
 export const STATUS_ORDER: Status[] = [
   "Active",
+  "Trial",
   "Pending",
   "Awaiting results",
   "Paused",
@@ -66,7 +68,7 @@ export function sortStudents(students: Student[], key: SortKey, at: Date = new D
       newest(a, b),
     // A phase only matters while someone is Active, so the rest follow.
     phase: (a, b) =>
-      Number(a.status !== "Active") - Number(b.status !== "Active") ||
+      Number(!onCheckin(a)) - Number(!onCheckin(b)) ||
       PHASE_PRIORITY.indexOf(currentPhase(a)) - PHASE_PRIORITY.indexOf(currentPhase(b)) ||
       newest(a, b),
   };

@@ -8,6 +8,7 @@ import {
   checkinDue,
   currentPhase,
   monthsAgo,
+  onCheckin,
   onDnd,
   phaseName,
   type Phase,
@@ -73,6 +74,8 @@ export function rankOf(s: Row): number {
   if (s.status === "Completed") return P + 3;
   if (s.status === "Awaiting results") return P + 2;
   if (s.dnd) return P + 1;
+  // A Trial student sits in the Trial band whatever phase they were left on.
+  if (s.status === "Trial") return PHASE_PRIORITY.indexOf(6) + 1;
   return PHASE_PRIORITY.indexOf(currentPhase(s)) + 1;
 }
 
@@ -140,8 +143,8 @@ export function buildRows(
 
   const all: Row[] = [
     ...students.map((s) => {
-      const dnd = s.status === "Active" && onDnd(s, day);
-      const rest = s.status === "Active" && !dnd && !entries[s.id] && !checkinDue(s, day);
+      const dnd = onCheckin(s) && onDnd(s, day);
+      const rest = onCheckin(s) && !dnd && !entries[s.id] && !checkinDue(s, day);
       return { ...s, dnd, rest };
     }),
     ...orphans,
@@ -207,7 +210,7 @@ export const UNKNOWN_COVERAGE: Coverage = {
 /** Every Active student, DND or not — what the Check-in list shows. Match
  *  students on their off day are left out. */
 export function activeRows(rows: Row[]): Row[] {
-  return rows.filter((r) => !r.archived && r.status === "Active" && !r.rest);
+  return rows.filter((r) => !r.archived && onCheckin(r) && !r.rest);
 }
 
 /** The students owed an update that day: Active and not on DND. */

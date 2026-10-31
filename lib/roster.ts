@@ -10,6 +10,8 @@ import { MEMO_MAX, cleanStamp } from "./memo";
 export const STATUSES = [
   "Active",
   "Paused",
+  // On a trial, not enrolled yet. Checked in daily like Active, shown orange.
+  "Trial",
   // Exam written, results not out yet. Set by itself the day after the exam
   // date (see "exam follow-up"); off the daily check-in like Completed.
   "Awaiting results",
@@ -21,6 +23,11 @@ export const STATUSES = [
   "MIA",
 ] as const;
 export type Status = (typeof STATUSES)[number];
+
+/** Active and Trial students are both on the daily check-in. */
+export function onCheckin(s: { status: Status }): boolean {
+  return s.status === "Active" || s.status === "Trial";
+}
 
 export const PAYMENTS = ["Paid", "Partial", "Pending", "Overdue"] as const;
 export type Payment = (typeof PAYMENTS)[number];

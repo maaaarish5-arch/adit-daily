@@ -426,9 +426,22 @@ export default function RosterView() {
                       <span className="due-amt">
                         {money(d.installment.amount, d.student.currency)}
                       </span>
-                      <span className="due-state">
-                        {d.installment.paid ? "Paid ✓" : "Due"}
-                      </span>
+                      <button
+                        type="button"
+                        className="due-tick"
+                        data-on={String(d.installment.paid)}
+                        aria-pressed={d.installment.paid}
+                        title={d.installment.paid ? "Tap to mark unpaid" : "Tap to mark paid"}
+                        onClick={() =>
+                          patchInstallment(d.student.id, d.installment.id, {
+                            paid: !d.installment.paid,
+                            // Same rule as Mark paid below: ticked = landed today.
+                            paidOn: !d.installment.paid ? d.installment.paidOn || today() : "",
+                          })
+                        }
+                      >
+                        {d.installment.paid ? "Paid ✓" : "Mark paid"}
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -543,7 +556,7 @@ export default function RosterView() {
                 {group} <b>{shown.filter((x) => groupOf(x) === group).length}</b>
               </div>
             )}
-            <div className="student">
+            <div className="student" data-status={s.status}>
             <div className="grid-row" data-payment={sum.status} data-open={String(payOpen)}>
               <div className="name-cell">
                 <input

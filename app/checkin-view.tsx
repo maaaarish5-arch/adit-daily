@@ -14,6 +14,7 @@ import {
   examDaysLeft,
   longDay,
   nextCheckin,
+  onCheckin,
   phase1DaysLeft,
   phase4In,
   phaseName,
@@ -391,7 +392,7 @@ export default function CheckinView() {
     const q = query.trim().toLowerCase();
     return (q ? allRows : listed).filter((r) => {
       if (month !== "all" && r.month !== month) return false;
-      if (phase !== "all" && (r.status !== "Active" || String(currentPhase(r)) !== phase))
+      if (phase !== "all" && (!onCheckin(r) || String(currentPhase(r)) !== phase))
         return false;
       if (openOnly && entryFor(entries, r.id).c) return false;
       if (q && !`${r.name} ${entryFor(entries, r.id).n}`.toLowerCase().includes(q))
@@ -671,7 +672,7 @@ export default function CheckinView() {
                     <HomeTime tz={r.tz} />
                   </div>
                   <div className="meta">
-                    {r.status === "Active" && !r.archived && (() => {
+                    {onCheckin(r) && !r.archived && (() => {
                       const p = currentPhase(r);
                       const left = phase1DaysLeft(r);
                       const toP4 = phase4In(r);
@@ -727,13 +728,13 @@ export default function CheckinView() {
                     {r.month}
                     {r.archived ? (
                       <span className="archived"> · no longer on the tracker</span>
-                    ) : r.status !== "Active" ? (
+                    ) : !onCheckin(r) ? (
                       <span className="flag"> · {r.status}</span>
                     ) : null}
                   </div>
                   {!r.archived && (
                     <div className="dnd" data-on={String(Boolean(r.dnd))}>
-                      {r.status !== "Active" ? null : r.dnd ? (
+                      {!onCheckin(r) ? null : r.dnd ? (
                         <>
                           <span className="dnd-tag">DND</span>
                           <span>Don&rsquo;t message · back {longDay(r.dndUntil)}</span>
@@ -814,7 +815,7 @@ export default function CheckinView() {
                     placeholder="What came out of the update…"
                     aria-label={`Note for ${r.name}`}
                   />
-                  {r.status === "Active" && !r.archived && (() => {
+                  {onCheckin(r) && !r.archived && (() => {
                     const mode = pillsFor(currentPhase(r));
                     return mode ? (
                       <ProgressPills
