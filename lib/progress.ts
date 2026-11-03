@@ -55,7 +55,17 @@ export const ALL_NBMES: number[] = [
 /** The NBME line that matters — the bar marks it on every pill. */
 export const NBME_TARGET = 65;
 
-/** Done systems and NBMEs, each holding the % entered for it. Absent = not done. */
+/** Stored in a pill that is done but has no % — ticked without an average.
+ *  Every real score is 0 to 100, so a negative number can't be mistaken for one. */
+export const DONE_NO_SCORE = -1;
+
+/** True when a pill holds a real % rather than absent or DONE_NO_SCORE. */
+export function hasScore(v: number | undefined): v is number {
+  return v !== undefined && v !== DONE_NO_SCORE;
+}
+
+/** Done systems and NBMEs, each holding the % entered for it, or DONE_NO_SCORE
+ *  when ticked without one. Absent = not done. */
 export type Progress = {
   sys: Partial<Record<SystemId, number>>;
   nbme: Partial<Record<string, number>>;
@@ -81,7 +91,7 @@ export function cleanProgress(raw: unknown): Progress {
   const pick = (src: unknown, allowed: Set<string>, into: Record<string, number>) => {
     if (!src || typeof src !== "object") return;
     for (const [k, v] of Object.entries(src as Record<string, unknown>)) {
-      const pct = cleanPct(v);
+      const pct = v === DONE_NO_SCORE ? DONE_NO_SCORE : cleanPct(v);
       if (allowed.has(k) && pct !== null) into[k] = pct;
     }
   };

@@ -7,14 +7,16 @@
 //   EXTRA_NBMES), each pill a bar filled to the score, then all 16 systems
 // Every row reads the same record, so a system done in Phase 1 or 2 is still
 // done in Phase 3. Tapping a pill opens a small box asking for the % — a
-// system is only marked done once its average is in.
+// system can also be ticked done with no average (DONE_NO_SCORE) and given one later.
 
 import { useState } from "react";
 import {
+  DONE_NO_SCORE,
   NBME_TARGET,
   P1_SYSTEMS,
   SYSTEMS,
   cleanPct,
+  hasScore,
   type Progress,
 } from "@/lib/progress";
 
@@ -22,8 +24,8 @@ type Kind = "sys" | "nbme";
 type Mode = "p1" | "p2" | "nbme";
 
 const HELP: Record<Mode, string> = {
-  p1: "Phase 1 starts with the foundation: Micro, Pharm, Renal and Respi. The other 12 systems are in the row below. When the student finishes one, tap it and type their average for that system (%). Tap a done system to change the number or mark it not done.",
-  p2: "Tap a system when the student has finished it, then type their average for that system (%). Systems ticked in Phase 1 are already here. Tap a done system to change the number or mark it not done.",
+  p1: "Phase 1 starts with the foundation: Micro, Pharm, Renal and Respi. The other 12 systems are in the row below. When the student finishes one, tap it and type their average for that system (%). Tap a done system to change the number or mark it not done. If there is no average, use the Done, no score button.",
+  p2: "Tap a system when the student has finished it, then type their average for that system (%). Systems ticked in Phase 1 are already here. Tap a done system to change the number or mark it not done. If there is no average, use the Done, no score button.",
   nbme: `Tap each NBME the student has taken and type their score (%). The bar fills to the score; the line marks ${NBME_TARGET}%. Below, tap each system as the student revises it and type their average (%). Systems done in Phase 1 and 2 show their old average until a new one is typed. Tap a pill to change it or clear it.`,
 };
 
@@ -85,7 +87,7 @@ export default function ProgressPills({
     if (open?.kind === kind && open.key === key) return setOpen(null);
     const v = valueOf(kind, key);
     setOpen({ kind, key, label });
-    setValue(v === undefined ? "" : String(v));
+    setValue(hasScore(v) ? String(v) : "");
     setError("");
   };
 
@@ -126,8 +128,13 @@ export default function ProgressPills({
         %
       </span>
       <button disabled={busy || typed === null} onClick={() => typed !== null && commit(typed)}>
-        {current === undefined ? "Mark done" : "Save"}
+        {current === undefined || current === DONE_NO_SCORE ? "Mark done" : "Save"}
       </button>
+      {current !== DONE_NO_SCORE && (
+        <button disabled={busy} onClick={() => commit(DONE_NO_SCORE)}>
+          Done, no score
+        </button>
+      )}
       {current !== undefined && (
         <button disabled={busy} onClick={() => commit(null)}>
           {open.kind === "nbme" ? "Not taken" : "Not done"}
@@ -178,20 +185,20 @@ export default function ProgressPills({
                     data-kind={i.kind}
                     data-on={String(on)}
                     data-open={String(isOpen(i))}
-                    data-pass={String(on && v >= NBME_TARGET)}
-                    aria-label={`${i.label}${on ? ` — ${v}%` : " — not done"}`}
-                    title={`${i.label}${on ? ` · ${v}%` : ""}`}
+                    data-pass={String(hasScore(v) && v >= NBME_TARGET)}
+                    aria-label={`${i.label}${on ? (hasScore(v) ? ` — ${v}%` : " — done, no score") : " — not done"}`}
+                    title={`${i.label}${hasScore(v) ? ` · ${v}%` : on ? " · done" : ""}`}
                     onClick={() => start(i.kind, i.key, i.label)}
                   >
                     {i.kind === "nbme" && (
                       <>
-                        <i className="pill-fill" style={{ width: `${on ? v : 0}%` }} />
+                        <i className="pill-fill" style={{ width: `${hasScore(v) ? v : 0}%` }} />
                         <i className="pill-target" style={{ left: `${NBME_TARGET}%` }} />
                       </>
                     )}
                     <span className="pill-txt">
                       {i.short}
-                      {on && <em>{v}%</em>}
+                      {on && <em>{hasScore(v) ? `${v}%` : "✓"}</em>}
                     </span>
                   </button>
                 );

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { updateRoster } from "@/lib/store";
-import { SYSTEMS, cleanPct, nbmesFor } from "@/lib/progress";
+import { DONE_NO_SCORE, SYSTEMS, cleanPct, nbmesFor } from "@/lib/progress";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +19,8 @@ function knownPill(id: string, kind: "sys" | "nbme", key: string): boolean {
 }
 
 /** Change one pill for one student: { id, kind: "sys" | "nbme", key, pct }.
- *  `pct` null clears it (not done). Touches nothing else on the roster. */
+ *  `pct` null clears it (not done); DONE_NO_SCORE (-1) marks it done with no %.
+ *  Touches nothing else on the roster. */
 export async function POST(req: Request) {
   if (!authorized(req)) {
     return NextResponse.json({ error: "wrong passcode" }, { status: 401 });
@@ -39,7 +40,8 @@ export async function POST(req: Request) {
   if (!knownPill(id, kind, key)) {
     return NextResponse.json({ error: "unknown pill" }, { status: 400 });
   }
-  const pct = body.pct === null ? null : cleanPct(body.pct);
+  const pct =
+    body.pct === null ? null : body.pct === DONE_NO_SCORE ? DONE_NO_SCORE : cleanPct(body.pct);
   if (body.pct !== null && pct === null) {
     return NextResponse.json({ error: "enter a number from 0 to 100" }, { status: 400 });
   }
