@@ -7,6 +7,7 @@ import SalesView from "./sales-view";
 import TrackersView from "./trackers-view";
 import TodosView from "./todos-view";
 import RemindersView from "./reminders-view";
+import TrialCheckinView from "./trial-checkin-view";
 import RemindersDue from "./reminders-due";
 import CornerView from "./corner-view";
 import { Sop } from "./sop";
@@ -76,8 +77,8 @@ export default function Page() {
   const [date, setDate] = useState<string | null>(null);
 
   const [tab, setTab] = useState<Tab>("today");
-  // Adit's Corner has three pages: the daily checklist, his to-dos and Reminders.
-  const [aditPage, setAditPage] = useState<"daily" | "todo" | "reminders">("daily");
+  // Adit's Corner has four pages: the daily checklist, his to-dos, Reminders and Trial Checkin.
+  const [aditPage, setAditPage] = useState<"daily" | "todo" | "reminders" | "trial">("daily");
   const [ticks, setTicks] = useState<Ticks>({});
   const [notes, setNotes] = useState("");
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -693,10 +694,15 @@ export default function Page() {
           <button data-on={String(aditPage === "reminders")} onClick={() => setAditPage("reminders")}>
             Reminders
           </button>
+          <button data-on={String(aditPage === "trial")} onClick={() => setAditPage("trial")}>
+            Trial Checkin
+          </button>
         </nav>
       )}
 
-      {tab === "adit" && aditPage === "reminders" ? (
+      {tab === "adit" && aditPage === "trial" ? (
+        <TrialCheckinView />
+      ) : tab === "adit" && aditPage === "reminders" ? (
         <RemindersView />
       ) : tab === "adit" && aditPage === "todo" ? (
         <TodosView

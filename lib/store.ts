@@ -364,6 +364,49 @@ export async function putCheckin(
   return saved;
 }
 
+/* ---------------------------- trial check-ins ----------------------------- */
+// Adit's Corner → Trial Checkin: the same {ticked, note} entries as a check-in,
+// but kept apart (`adit:trialcheckin:YYYY-MM-DD`) so ticking one never ticks
+// the other.
+
+const TRIAL_PREFIX = "adit:trialcheckin:";
+const TRIAL_FILE = path.join(process.cwd(), ".data", "trial-checkins.json");
+
+export async function getTrialCheckin(date: DayKey): Promise<CheckinDoc> {
+  if (usingRedis) {
+    return parseCheckin(await redisCommand(["GET", TRIAL_PREFIX + date]));
+  }
+  assertLocal();
+  try {
+    const all = JSON.parse(await fs.readFile(TRIAL_FILE, "utf8"));
+    return parseCheckin(all[date]);
+  } catch {
+    return EMPTY_CHECKIN;
+  }
+}
+
+export async function putTrialCheckin(
+  date: DayKey,
+  entries: Entries
+): Promise<CheckinDoc> {
+  const saved: CheckinDoc = { entries, updatedAt: new Date().toISOString() };
+  if (usingRedis) {
+    await redisCommand(["SET", TRIAL_PREFIX + date, JSON.stringify(saved)]);
+    return saved;
+  }
+  assertLocal();
+  let all: Record<string, unknown> = {};
+  try {
+    all = JSON.parse(await fs.readFile(TRIAL_FILE, "utf8"));
+  } catch {
+    all = {};
+  }
+  all[date] = saved;
+  await fs.mkdir(path.dirname(TRIAL_FILE), { recursive: true });
+  await fs.writeFile(TRIAL_FILE, JSON.stringify(all, null, 2), "utf8");
+  return saved;
+}
+
 /** Every day's check-in in one round trip — the month strip needs all of them. */
 export async function getCheckins(
   dates: DayKey[]
