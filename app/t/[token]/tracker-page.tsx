@@ -238,7 +238,7 @@ export default function TrackerPage({
             const p = d.from ? dayParts(d.from) : null;
             const { k, n } = dayDone(d);
             return (
-              <button key={id} className="trk-chip" data-today={String(isToday(d))} data-done={String(k === n)} onClick={() => jump(id)}>
+              <button key={id} className="trk-chip" data-today={String(isToday(d))} data-done={String(n > 0 && k === n)} onClick={() => jump(id)}>
                 {p ? (
                   <>
                     <small>{p.wd}</small>
@@ -318,9 +318,15 @@ export default function TrackerPage({
                   </div>
                   <div className="trk-today-sub">
                     {d.label}
-                    {section.title ? ` of ${section.title}` : ""} · {k} of {n} done
+                    {section.title ? ` of ${section.title}` : ""}
+                    {n > 0 ? ` · ${k} of ${n} done` : ""}
                   </div>
                 </div>
+                {n === 0 && d.callout && (
+                  <div className="trk-callout">
+                    <Rich text={d.callout} />
+                  </div>
+                )}
                 {blocksOf(d, "today")}
               </section>
             );
@@ -339,21 +345,23 @@ export default function TrackerPage({
                     <h2>{s.title || tracker.title}</h2>
                     {s.sub && <div className="trk-dates">{s.sub}</div>}
                   </div>
-                  <div>
-                    <div className="trk-sys-meta">
-                      <span>
-                        {k} of {list.length} done
-                      </span>
-                      {sysLink && (
+                  {list.length > 0 && (
+                    <div>
+                      <div className="trk-sys-meta">
                         <span>
-                          UWorld avg <b>{avg === null ? "—" : `${avg}%`}</b>
+                          {k} of {list.length} done
                         </span>
-                      )}
+                        {sysLink && (
+                          <span>
+                            UWorld avg <b>{avg === null ? "—" : `${avg}%`}</b>
+                          </span>
+                        )}
+                      </div>
+                      <div className="trk-bar">
+                        <i style={{ width: `${share * 100}%` }} />
+                      </div>
                     </div>
-                    <div className="trk-bar">
-                      <i style={{ width: `${share * 100}%` }} />
-                    </div>
-                  </div>
+                  )}
                 </div>
                 {s.days.map((d, di) => (
                   <div key={di} className="trk-day" id={`day-${si}-${di}`} data-today={String(isToday(d))}>
@@ -363,8 +371,17 @@ export default function TrackerPage({
                       {isToday(d) && <em>Today</em>}
                     </div>
                     <div className="trk-day-body">
-                      {d.topic && <div className="trk-topic">{d.topic}</div>}
-                      {blocksOf(d, "plan")}
+                      {d.blocks.every((b) => !b.tasks.length) ? (
+                        <div className="trk-off">
+                          <b>Day Off</b>
+                          {d.topic && <span>{d.topic}</span>}
+                        </div>
+                      ) : (
+                        <>
+                          {d.topic && <div className="trk-topic">{d.topic}</div>}
+                          {blocksOf(d, "plan")}
+                        </>
+                      )}
                       {d.callout && (
                         <div className="trk-callout">
                           <Rich text={d.callout} />

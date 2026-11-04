@@ -483,6 +483,32 @@ body:has(.trk) .grain {
   font-weight: 700;
 }
 
+/* A day with nothing to tick: a holiday, a buffer day, any day off. */
+.trk-off {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: var(--accent-soft);
+}
+
+.trk-off b {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.trk-off span {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
 .trk-blk {
   margin: 12px 0 0;
   font-size: 11px;
