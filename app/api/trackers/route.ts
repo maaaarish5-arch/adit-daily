@@ -5,7 +5,9 @@ import {
   putTrackerPlan,
   setTrackerArchived,
   trackerSummaries,
+  updateRoster,
 } from "@/lib/store";
+import { nbmesFor } from "@/lib/progress";
 import {
   TrackerError,
   allTasks,
@@ -97,6 +99,16 @@ export async function POST(req: Request) {
     };
 
     const tasks = allTasks(tracker);
+    // An NBME the plan names that has no pill for this student yet gets one when
+    // the tracker is published (NBME 35, an older form...).
+    const newPills = [
+      ...new Set(
+        tasks
+          .filter((t) => t.score?.kind === "nbme")
+          .map((t) => Number(t.score!.key))
+          .filter((n) => !nbmesFor(student.id, student.progress).includes(n))
+      ),
+    ].sort((a, b) => a - b);
     const check = {
       token: body.dryRun === true ? null : tracker.token,
       path: body.dryRun === true ? null : `/t/${tracker.token}`,
@@ -114,10 +126,23 @@ export async function POST(req: Request) {
         .filter((t) => t.preset)
         .map((t) => `${t.text} → ${t.preset!.blocks} block${t.preset!.blocks === 1 ? "" : "s"} of ${t.preset!.per}`),
       replaced: Boolean(previous),
+      newPills: newPills.map((n) => `NBME ${n}`),
     };
     if (body.dryRun === true) return NextResponse.json({ dryRun: true, ...check });
 
     await putTrackerPlan(tracker);
+    if (newPills.length) {
+      await updateRoster((students) => {
+        let found = false;
+        const next = students.map((s) => {
+          if (s.id !== student.id) return s;
+          found = true;
+          const extra = [...new Set([...(s.progress.extra ?? []), ...newPills])].sort((a, b) => a - b);
+          return { ...s, progress: { ...s.progress, extra } };
+        });
+        return found ? next : null;
+      });
+    }
     return NextResponse.json(check);
   } catch (err) {
     if (err instanceof TrackerError) {

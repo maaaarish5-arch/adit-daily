@@ -821,7 +821,7 @@ export default function CheckinView() {
                       <ProgressPills
                         name={r.name}
                         mode={mode}
-                        nbmes={nbmesFor(r.id)}
+                        nbmes={nbmesFor(r.id, r.progress)}
                         progress={r.progress ?? { sys: {}, nbme: {} }}
                         onSave={(kind, key, pct) => saveProgress(r.id, kind, key, pct)}
                       />
@@ -836,7 +836,7 @@ export default function CheckinView() {
                     memo={r.memo}
                     editedAt={r.memoEditedAt}
                     progress={r.progress ?? { sys: {}, nbme: {} }}
-                    nbmes={nbmesFor(r.id)}
+                    nbmes={nbmesFor(r.id, r.progress)}
                     closing={memoClosing === r.id}
                     onSave={(text) => saveMemo(r.id, text)}
                     onAddScore={(kind, key, pct) => saveProgress(r.id, kind, key, pct)}

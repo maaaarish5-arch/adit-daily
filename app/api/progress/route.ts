@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { updateRoster } from "@/lib/store";
+import type { Student } from "@/lib/roster";
 import { DONE_NO_SCORE, SYSTEMS, cleanPct, nbmesFor } from "@/lib/progress";
 
 export const dynamic = "force-dynamic";
@@ -13,9 +14,10 @@ function authorized(req: Request): boolean {
 
 const SYSTEM_KEYS = new Set<string>(SYSTEMS.map((s) => s.id));
 
-/** A pill this student has: any system, or one of their NBME forms. */
-function knownPill(id: string, kind: "sys" | "nbme", key: string): boolean {
-  return kind === "sys" ? SYSTEM_KEYS.has(key) : nbmesFor(id).map(String).includes(key);
+/** A pill this student has: any system, or one of their NBME forms (the
+ *  standard ones, their own, or one a tracker made for them). */
+function knownPill(s: Student, kind: "sys" | "nbme", key: string): boolean {
+  return kind === "sys" ? SYSTEM_KEYS.has(key) : nbmesFor(s.id, s.progress).map(String).includes(key);
 }
 
 /** Change one pill for one student: { id, kind: "sys" | "nbme", key, pct }.
@@ -37,9 +39,6 @@ export async function POST(req: Request) {
   if (typeof id !== "string" || (kind !== "sys" && kind !== "nbme") || typeof key !== "string") {
     return NextResponse.json({ error: "bad request" }, { status: 400 });
   }
-  if (!knownPill(id, kind, key)) {
-    return NextResponse.json({ error: "unknown pill" }, { status: 400 });
-  }
   const pct =
     body.pct === null ? null : body.pct === DONE_NO_SCORE ? DONE_NO_SCORE : cleanPct(body.pct);
   if (body.pct !== null && pct === null) {
@@ -48,18 +47,24 @@ export async function POST(req: Request) {
 
   try {
     let found = false;
+    let unknown = false;
     const saved = await updateRoster((students) => {
       const next = students.map((s) => {
         if (s.id !== id) return s;
         found = true;
+        if (!knownPill(s, kind, key)) {
+          unknown = true;
+          return s;
+        }
         const bucket = { ...s.progress[kind] } as Record<string, number>;
         if (pct === null) delete bucket[key];
         else bucket[key] = pct;
         return { ...s, progress: { ...s.progress, [kind]: bucket } };
       });
-      return found ? next : null; // unknown student: write nothing
+      return found && !unknown ? next : null; // unknown student or pill: write nothing
     });
     if (!found) return NextResponse.json({ error: "student not found" }, { status: 404 });
+    if (unknown) return NextResponse.json({ error: "unknown pill" }, { status: 400 });
     const student = saved.students.find((s) => s.id === id);
     return NextResponse.json({ progress: student?.progress });
   } catch (err) {

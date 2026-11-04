@@ -5,13 +5,14 @@ import {
   allTasks,
   makeSetup,
   pillValue,
+  scoreOf,
   setupFor,
   unitsOf,
   type ScoreLink,
   type TaskMark,
   type TrackerState,
 } from "@/lib/trackers";
-import { cleanPct } from "@/lib/progress";
+import { NBMES, EXTRA_NBMES, cleanForm, cleanPct, nbmesFor } from "@/lib/progress";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,8 @@ export async function GET(_req: Request, { params }: Ctx) {
  *   { taskId, setup: null }          undo a split
  *   { taskId, skip: true | false }   close (or reopen) the optional "how many?"
  *                                    on a reading / flashcards / videos task
+ *   { taskId, form: "33" | null }    choose (or clear) the NBME on a task whose plan
+ *                                    didn't say which one (`pick`)
  *   { taskId, unit, done?, score? }  tick or score unit n of a split task
  * A score also ticks. `score: null` clears a score and keeps the tick.
  */
@@ -68,6 +71,10 @@ export async function POST(req: Request, { params }: Ctx) {
   try {
     let problem: { status: number; error: string } | null = null;
     let link: ScoreLink | null = null;
+    // The NBME form a pick brought in (it needs a pill), and the one it left
+    // behind with what its pill held from this tracker, if anything.
+    let madeForm: number | null = null;
+    let left: { key: string; value: number | null } | null = null;
     let studentId = "";
     let pill: number | null = null;
     const now = new Date().toISOString();
@@ -84,6 +91,7 @@ export async function POST(req: Request, { params }: Ctx) {
         done: { ...current.done },
         setup: { ...current.setup },
         skip: { ...current.skip },
+        forms: { ...current.forms },
         updatedAt: now,
       };
       const mark = (id: string) => {
@@ -94,7 +102,24 @@ export async function POST(req: Request, { params }: Ctx) {
         next.done[id] = m;
       };
 
-      if (body.skip !== undefined) {
+      if (body.form !== undefined) {
+        // The student says which NBME this is. The task then scores as that form.
+        if (!task.pick) return fail(400, "this task has no form to choose");
+        if (body.form === null) {
+          delete next.forms[task.id];
+        } else {
+          const n = cleanForm(body.form);
+          if (n === null) return fail(400, "Enter the NBME number, for example 32");
+          next.forms[task.id] = String(n);
+          madeForm = n;
+        }
+        const before = scoreOf(task, current);
+        const after = scoreOf(task, next);
+        if (before && (!after || after.key !== before.key)) {
+          left = { key: before.key, value: pillValue(tracker, current, before) };
+        }
+        link = after;
+      } else if (body.skip !== undefined) {
         if (typeof body.skip !== "boolean") return fail(400, "bad request");
         if (!task.split || !SPLITS[task.split].info) return fail(400, "only a count can be skipped");
         if (body.skip) next.skip[task.id] = true;
@@ -118,7 +143,7 @@ export async function POST(req: Request, { params }: Ctx) {
           const after = new Set(unitsOf(task, made).map((u) => u.id));
           before.forEach((u) => (!keep || !after.has(u.id)) && delete next.done[u.id]);
         }
-        link = task.score;
+        link = scoreOf(task, next);
       } else if (unit !== undefined) {
         // Every block takes a score, whether or not the task feeds a pill
         // (an assessment doesn't); `link` below is what decides the pill.
@@ -126,7 +151,7 @@ export async function POST(req: Request, { params }: Ctx) {
         if (!u) return fail(404, "not found");
         if (done === false) delete next.done[u.id];
         else mark(u.id);
-        link = task.score;
+        link = scoreOf(task, next);
       } else {
         if (unitsOf(task, setupFor(task, current)).length) {
           return fail(400, "tick this task's parts instead");
@@ -134,7 +159,7 @@ export async function POST(req: Request, { params }: Ctx) {
         if (hasScore && !task.score) return fail(400, "this task doesn't take scores");
         if (done === false) delete next.done[task.id];
         else mark(task.id);
-        link = task.score;
+        link = scoreOf(task, next);
       }
 
       if (link) pill = pillValue(tracker, next, link);
@@ -151,16 +176,39 @@ export async function POST(req: Request, { params }: Ctx) {
     // cleared the pill is left alone; it may have been typed on Check-in.
     const l = link as ScoreLink | null;
     const value = pill as number | null;
-    if (l && value !== null && studentId) {
+    const gone = left as { key: string; value: number | null } | null;
+    const made = madeForm as number | null;
+    if (((l && value !== null) || gone || made !== null) && studentId) {
       await updateRoster((students) => {
         let found = false;
         const next = students.map((s) => {
           if (s.id !== studentId) return s;
           found = true;
-          const bucket = { ...s.progress[l.kind] } as Record<string, number>;
-          if (bucket[l.key] === value) return s;
-          bucket[l.key] = value;
-          return { ...s, progress: { ...s.progress, [l.kind]: bucket } };
+          let progress = s.progress;
+          const standard = (n: number) => (NBMES as readonly number[]).includes(n) || (EXTRA_NBMES[s.id] ?? []).includes(n);
+          // The form was changed: the old form's pill goes, but only if this
+          // tracker's scores were what filled it (or it was never scored), and
+          // a pill made just for that form goes with it.
+          if (gone) {
+            const old = { ...progress.nbme } as Record<string, number>;
+            if (old[gone.key] === undefined || old[gone.key] === gone.value) {
+              delete old[gone.key];
+              const extra = (progress.extra ?? []).filter((n) => String(n) !== gone.key || standard(n));
+              progress = { ...progress, nbme: old, extra: extra.length ? extra : undefined };
+            }
+          }
+          // A form number with no pill yet gets one, even before it has a score.
+          if (made !== null && !nbmesFor(s.id, progress).includes(made)) {
+            progress = { ...progress, extra: [...new Set([...(progress.extra ?? []), made])].sort((a, b) => a - b) };
+          }
+          if (l && value !== null) {
+            const bucket = { ...progress[l.kind] } as Record<string, number>;
+            if (bucket[l.key] !== value) {
+              bucket[l.key] = value;
+              progress = { ...progress, [l.kind]: bucket };
+            }
+          }
+          return progress === s.progress ? s : { ...s, progress };
         });
         return found ? next : null;
       });

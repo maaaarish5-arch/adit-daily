@@ -42,12 +42,29 @@ export const EXTRA_NBMES: Record<string, readonly number[]> = {
   csv047: [20], // Ana
 };
 
-/** The NBME forms this student's pills show, lowest first. */
-export function nbmesFor(studentId: string): number[] {
-  return [...(EXTRA_NBMES[studentId] ?? []), ...NBMES].sort((a, b) => a - b);
+/** The highest NBME form number accepted. Forms are numbered from 1. */
+export const MAX_NBME = 60;
+
+/** An NBME form number as a whole number 1 to MAX_NBME, or null. */
+export function cleanForm(v: unknown): number | null {
+  const s = typeof v === "number" ? String(v) : typeof v === "string" ? v.trim() : "";
+  if (!/^\d{1,2}$/.test(s)) return null;
+  const n = Number(s);
+  return n >= 1 && n <= MAX_NBME ? n : null;
 }
 
-/** Every form someone holds a pill for — what a stored score may be keyed by. */
+/** The NBME forms this student's pills show, lowest first: forms 26 to 34, the
+ *  student's own older forms, and any other form a tracker or a score brought
+ *  in (`progress.extra`, or a score already stored for it). A form number that
+ *  has no pill yet gets one the first time it is used. */
+export function nbmesFor(studentId: string, progress?: Pick<Progress, "nbme" | "extra">): number[] {
+  const own = progress
+    ? [...(progress.extra ?? []), ...Object.keys(progress.nbme).map(Number).filter((n) => cleanForm(n) !== null)]
+    : [];
+  return [...new Set([...(EXTRA_NBMES[studentId] ?? []), ...NBMES, ...own])].sort((a, b) => a - b);
+}
+
+/** Every form someone holds a fixed pill for. */
 export const ALL_NBMES: number[] = [
   ...new Set([...NBMES, ...Object.values(EXTRA_NBMES).flat()]),
 ].sort((a, b) => a - b);
@@ -69,13 +86,15 @@ export function hasScore(v: number | undefined): v is number {
 export type Progress = {
   sys: Partial<Record<SystemId, number>>;
   nbme: Partial<Record<string, number>>;
+  /** NBME forms that have a pill for this student beyond the standard ones: a
+   *  form number a student entered on a tracker, or one a plan named. The pill
+   *  shows even before it has a score. */
+  extra?: number[];
 };
 
 export const EMPTY_PROGRESS: Progress = { sys: {}, nbme: {} };
 
 const SYSTEM_IDS = new Set<string>(SYSTEMS.map((s) => s.id));
-const NBME_IDS = new Set<string>(ALL_NBMES.map(String));
-
 /** A percentage 0–100, one decimal at most, or null if it isn't one. */
 export function cleanPct(v: unknown): number | null {
   if (v === "" || v === null || v === undefined) return null;
@@ -84,11 +103,14 @@ export function cleanPct(v: unknown): number | null {
   return Math.round(n * 10) / 10;
 }
 
+/** Every form number a score can be stored under. */
+const FORM_KEYS = { has: (k: string) => String(cleanForm(k)) === k };
+
 export function cleanProgress(raw: unknown): Progress {
   const out: Progress = { sys: {}, nbme: {} };
   if (!raw || typeof raw !== "object") return out;
   const r = raw as Record<string, unknown>;
-  const pick = (src: unknown, allowed: Set<string>, into: Record<string, number>) => {
+  const pick = (src: unknown, allowed: { has: (k: string) => boolean }, into: Record<string, number>) => {
     if (!src || typeof src !== "object") return;
     for (const [k, v] of Object.entries(src as Record<string, unknown>)) {
       const pct = v === DONE_NO_SCORE ? DONE_NO_SCORE : cleanPct(v);
@@ -96,7 +118,11 @@ export function cleanProgress(raw: unknown): Progress {
     }
   };
   pick(r.sys, SYSTEM_IDS, out.sys as Record<string, number>);
-  pick(r.nbme, NBME_IDS, out.nbme as Record<string, number>);
+  pick(r.nbme, FORM_KEYS, out.nbme as Record<string, number>);
+  if (Array.isArray(r.extra)) {
+    const extra = [...new Set(r.extra.map(cleanForm).filter((n): n is number => n !== null))].sort((a, b) => a - b);
+    if (extra.length) out.extra = extra;
+  }
   return out;
 }
 

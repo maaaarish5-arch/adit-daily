@@ -21,7 +21,7 @@
 // videos only record the amount (120 pages, 6 videos) for reference. They stay
 // one tick; nobody ticks off every video.
 
-import { ALL_NBMES, SYSTEMS, cleanPct } from "./progress";
+import { SYSTEMS, cleanForm, cleanPct } from "./progress";
 
 /** A tick and, for score tasks, the % entered. */
 export type TaskMark = { at: string; score?: number };
@@ -38,10 +38,13 @@ export type TrackerState = {
   /** Reference-only tasks whose "how many?" question was closed with ×. The
    *  count is optional; closing it keeps it closed for everyone. */
   skip: Record<string, true>;
+  /** Which NBME form the student chose, by task id, for a task whose plan didn't
+   *  name one (`pick`). The key is the form's number: "33". */
+  forms: Record<string, string>;
   updatedAt: string | null;
 };
 
-export const EMPTY_STATE: TrackerState = { done: {}, setup: {}, skip: {}, updatedAt: null };
+export const EMPTY_STATE: TrackerState = { done: {}, setup: {}, skip: {}, forms: {}, updatedAt: null };
 
 /* ------------------------------ split tasks ------------------------------ */
 
@@ -144,6 +147,54 @@ export function taskShare(task: TrackerTask, state: TrackerState): number {
   return units.filter((u) => state.done[u.id]).length / units.length;
 }
 
+/** The pill a task's scores feed. A task that asks which NBME has none until
+ *  the student picks the form, then it is that form's pill. */
+export function scoreOf(task: TrackerTask, state: Pick<TrackerState, "forms">): ScoreLink | null {
+  if (task.score) return task.score;
+  const form = task.pick ? state.forms?.[task.id] : undefined;
+  return form ? { kind: "nbme", key: form } : null;
+}
+
+/** "NBME" as the plan wrote it, or "NBME 33" once the student chose the form. */
+export function withForm(text: string, form: string | undefined): string {
+  return form ? text.replace(/(?<![A-Za-z])NBME(?![A-Za-z]|\s*\d)/i, `NBME ${form}`) : text;
+}
+
+/** The tracker as the student should see it: wherever a task asked "which
+ *  NBME?" and they chose one, the task, its day and its section read "NBME 33"
+ *  instead of "NBME". Nothing is stored; the plan itself never changes. */
+export function applyForms(t: Tracker, state: Pick<TrackerState, "forms">): Tracker {
+  if (!Object.keys(state.forms ?? {}).length) return t;
+  const chosen = (tasks: TrackerTask[]) => tasks.map((x) => formOf(x, state)).find(Boolean);
+  return {
+    ...t,
+    sections: t.sections.map((s) => {
+      const sForm = chosen(s.days.flatMap((d) => d.blocks.flatMap((b) => b.tasks)));
+      return {
+        ...s,
+        title: withForm(s.title, sForm),
+        days: s.days.map((d) => {
+          const dForm = chosen(d.blocks.flatMap((b) => b.tasks));
+          return {
+            ...d,
+            label: withForm(d.label, dForm),
+            topic: withForm(d.topic, dForm),
+            blocks: d.blocks.map((b) => ({
+              ...b,
+              tasks: b.tasks.map((x) => ({ ...x, text: withForm(x.text, formOf(x, state)) })),
+            })),
+          };
+        }),
+      };
+    }),
+  };
+}
+
+/** The form the student chose for a task, if it asks. */
+export function formOf(task: TrackerTask, state: Pick<TrackerState, "forms">): string | undefined {
+  return task.pick ? state.forms?.[task.id] : undefined;
+}
+
 /** The value a progress pill should hold: the average of every scored unit
  *  linked to it, weighted by questions, or null if nothing is scored yet. */
 export function pillValue(
@@ -154,7 +205,8 @@ export function pillValue(
   let sum = 0;
   let weight = 0;
   for (const t of allTasks(tracker)) {
-    if (!t.score || t.score.kind !== link.kind || t.score.key !== link.key) continue;
+    const own = scoreOf(t, state);
+    if (!own || own.kind !== link.kind || own.key !== link.key) continue;
     const units = unitsOf(t, setupFor(t, state));
     if (units.length) {
       for (const u of units) {
@@ -190,6 +242,9 @@ export type TrackerTask = {
   /** How the plan itself divides a task into blocks ("2 blocks of 20
    *  questions"), so they show without asking. The student can still change it. */
   preset: Preset | null;
+  /** "nbme": the plan said "an NBME" but not which one, so the student picks the
+   *  form (NBME 32, 33…). The task then reads and scores as that form. */
+  pick: "nbme" | null;
 };
 
 /** What a plan says about a task's blocks: `blocks` blocks of `per` questions. */
@@ -260,7 +315,6 @@ export type TrackerSummary = {
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/;
 const SYSTEM_IDS = new Set<string>(SYSTEMS.map((s) => s.id));
-const NBME_IDS = new Set<string>(ALL_NBMES.map(String));
 
 const str = (v: unknown, max: number) =>
   typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : "";
@@ -273,7 +327,7 @@ export function cleanScoreLink(v: unknown): ScoreLink | null {
   const { kind, key } = v as Record<string, unknown>;
   const k = String(key ?? "");
   if (kind === "sys" && SYSTEM_IDS.has(k)) return { kind, key: k };
-  if (kind === "nbme" && NBME_IDS.has(k)) return { kind, key: k };
+  if (kind === "nbme" && String(cleanForm(k)) === k) return { kind, key: k };
   return null;
 }
 
@@ -355,7 +409,9 @@ export function cleanPlan(raw: unknown): Omit<
                 let split = SPLIT_KINDS.includes(tr.split as SplitKind) ? (tr.split as SplitKind) : null;
                 if (!split && ASSESSMENT_RE.test(text)) split = "assessment";
                 const preset = split ? presetOf(split, tr.preset, text, `${where}, task ${id}`) : null;
-                return { id, text, meta: str(tr.meta, 300), score: cleanScoreLink(tr.score), split, preset };
+                // A task that asks which NBME is never tied to one form by the plan.
+                const pick = split === "nbme" && tr.pick === "nbme" ? ("nbme" as const) : null;
+                return { id, text, meta: str(tr.meta, 300), score: pick ? null : cleanScoreLink(tr.score), split, preset, pick };
               }),
             };
           }),
@@ -416,7 +472,7 @@ export function cleanTracker(raw: unknown): Tracker | null {
 }
 
 export function cleanState(raw: unknown): TrackerState {
-  if (!raw || typeof raw !== "object") return { done: {}, setup: {}, skip: {}, updatedAt: null };
+  if (!raw || typeof raw !== "object") return { ...EMPTY_STATE };
   const r = raw as Record<string, unknown>;
   const done: Record<string, TaskMark> = {};
   if (r.done && typeof r.done === "object") {
@@ -444,7 +500,13 @@ export function cleanState(raw: unknown): TrackerState {
   if (r.skip && typeof r.skip === "object") {
     for (const [id, v] of Object.entries(r.skip as Record<string, unknown>)) if (v === true) skip[id] = true;
   }
-  return { done, setup, skip, updatedAt: stamp(r.updatedAt) || null };
+  const forms: Record<string, string> = {};
+  if (r.forms && typeof r.forms === "object") {
+    for (const [id, v] of Object.entries(r.forms as Record<string, unknown>)) {
+      if (typeof v === "string" && String(cleanForm(v)) === v) forms[id] = v;
+    }
+  }
+  return { done, setup, skip, forms, updatedAt: stamp(r.updatedAt) || null };
 }
 
 /* ------------------------------ reading ------------------------------ */

@@ -18,7 +18,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   SPLITS,
   allTasks,
+  applyForms,
   dayRange,
+  formOf,
   makeSetup,
   pillValue,
   scorePrompt,
@@ -43,6 +45,7 @@ type Body = {
   unit?: number;
   setup?: { a: string; b: string } | null;
   skip?: boolean;
+  form?: string | null;
 };
 type Send = (body: Body, optimistic?: (s: TrackerState) => TrackerState) => Promise<string | null>;
 
@@ -169,6 +172,8 @@ export default function TrackerPage({
   );
 
   const tasks = useMemo(() => allTasks(tracker), [tracker]);
+  // Where a task asked "which NBME?", the page reads "NBME 33" once it's chosen.
+  const view = useMemo(() => applyForms(tracker, state), [tracker, state]);
   const shares = tasks.map((t) => taskShare(t, state));
   const fullyDone = shares.filter((x) => x === 1).length;
   const pct = tasks.length ? Math.round((shares.reduce((a, b) => a + b, 0) / tasks.length) * 100) : 0;
@@ -180,7 +185,7 @@ export default function TrackerPage({
       ? spanDays(tracker.start, today)
       : 0;
 
-  const days = tracker.sections.flatMap((s, si) =>
+  const days = view.sections.flatMap((s, si) =>
     s.days.map((d, di) => ({ d, si, di, id: `day-${si}-${di}`, section: s }))
   );
   const todays = days.filter((x) => isToday(x.d));
@@ -257,7 +262,7 @@ export default function TrackerPage({
         <aside className="trk-side">
           <nav className="trk-daylist" aria-label="Every day">
             <h3>Every day</h3>
-            {tracker.sections.map((s, si) => (
+            {view.sections.map((s, si) => (
               <div key={si}>
                 {s.title && <div className="trk-sysname">{s.title}</div>}
                 {s.days.map((d, di) => {
@@ -332,7 +337,7 @@ export default function TrackerPage({
             );
           })}
 
-          {tracker.sections.map((s, si) => {
+          {view.sections.map((s, si) => {
             const list = s.days.flatMap((d) => d.blocks.flatMap((b) => b.tasks));
             const k = list.filter((t) => taskShare(t, state) === 1).length;
             const share = list.length ? list.reduce((a, t) => a + taskShare(t, state), 0) / list.length : 0;
@@ -422,6 +427,7 @@ function TaskRow({
   send: Send;
   where: string;
 }) {
+  const form = formOf(task, state);
   const setup = setupFor(task, state);
   const own = Boolean(state.setup[task.id]);
   const units = unitsOf(task, setup);
@@ -476,6 +482,8 @@ function TaskRow({
           {task.text}
         </strong>
         {task.meta && <small>{task.meta}</small>}
+
+        {task.pick && <FormPicker form={form} taskId={task.id} send={send} where={where} />}
 
         {info && setup && !editing && (
           <div className="trk-amount">
@@ -561,6 +569,105 @@ function TaskRow({
           />
         )}
       </div>
+    </div>
+  );
+}
+
+/** "Which NBME are you taking?": for a task the plan left open ("an NBME"). The
+ *  student types the form's number and presses Save. Once it's saved the box
+ *  goes away, the task, its day and its section read NBME 33, and an "Edit NBME
+ *  number" link is left in case it was mistyped. A number with no pill yet gets
+ *  one. Same dashed box as the "how many?" questions. */
+function FormPicker({
+  form,
+  taskId,
+  send,
+  where,
+}: {
+  form: string | undefined;
+  taskId: string;
+  send: Send;
+  where: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(form ?? "");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const id = `${where}-${taskId}-form`;
+
+  const valid = /^\d{1,2}$/.test(value) && Number(value) >= 1 && Number(value) <= 60;
+  const bad = value !== "" && !valid;
+  const open = !form || editing;
+
+  const save = async () => {
+    if (bad || busy) return;
+    if (value === (form ?? "")) {
+      setEditing(false);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    const err = await send({ taskId, form: value === "" ? null : value }, (s) => {
+      const forms = { ...s.forms };
+      if (value) forms[taskId] = String(Number(value));
+      else delete forms[taskId];
+      return { ...s, forms };
+    });
+    setBusy(false);
+    if (err) setError(err);
+    else setEditing(false);
+  };
+
+  if (!open) {
+    return (
+      <div className="trk-amount">
+        <button
+          className="trk-link"
+          onClick={() => {
+            setValue(form ?? "");
+            setError("");
+            setEditing(true);
+          }}
+        >
+          Edit NBME number
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="trk-setup">
+      <div className="trk-setup-q">Which NBME are you taking?</div>
+      <div className="trk-asks">
+        <label className="trk-ask" htmlFor={id}>
+          <span>NBME number</span>
+          <input
+            id={id}
+            inputMode="numeric"
+            maxLength={2}
+            value={value}
+            placeholder="—"
+            aria-invalid={bad}
+            onChange={(e) => setValue(e.target.value.replace(/[^\d]/g, ""))}
+            onKeyDown={(e) => e.key === "Enter" && save()}
+          />
+        </label>
+        <div className="trk-setup-acts">
+          <button className="trk-link" onClick={save} disabled={bad || busy || (!value && !form)}>
+            Save
+          </button>
+          {form && (
+            <button className="trk-link" onClick={() => setEditing(false)}>
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+      {(bad || error) && (
+        <div className="trk-setup-out">
+          <span className="trk-setup-warn">{bad ? "Enter the NBME number, from 1 to 60" : error}</span>
+        </div>
+      )}
     </div>
   );
 }

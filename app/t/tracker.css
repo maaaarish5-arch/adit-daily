@@ -761,6 +761,11 @@ button.trk-tick::before {
   color: var(--ink) !important;
 }
 
+.trk-link:disabled {
+  opacity: 0.4;
+  cursor: default;
+  text-decoration: none;
+}
 .trk-addcount {
   display: inline-block;
   margin-top: 4px;
