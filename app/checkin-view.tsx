@@ -86,6 +86,24 @@ export default function CheckinView() {
     }
   };
   const [copied, setCopied] = useState(false);
+  /** The student whose name was just copied (clicking a name copies it). */
+  const [copiedName, setCopiedName] = useState<string | null>(null);
+  const copyName = async (id: string, name: string) => {
+    // First name only: no "Dr.", no surname.
+    const text = name
+      .replace(/^\s*dr(\.\s*|\s+)/i, "")
+      .trim()
+      .split(/\s+/)[0]
+      .replace(/^[^\p{L}]+|[^\p{L}]+$/gu, "");
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedName(id);
+      setTimeout(() => setCopiedName((cur) => (cur === id ? null : cur)), 1500);
+    } catch {
+      setCopiedName(null);
+    }
+  };
   /** The student whose DND length picker is open, if any. */
   const [dndOpen, setDndOpen] = useState<string | null>(null);
   /** What is typed in the picker's custom "__ days" box. */
@@ -648,7 +666,15 @@ export default function CheckinView() {
 
                 <div className="who">
                   <div className="nm">
-                    {r.name}
+                    <button
+                      type="button"
+                      className="nm-copy"
+                      onClick={() => copyName(r.id, r.name)}
+                      title="Click to copy the first name"
+                    >
+                      {r.name}
+                    </button>
+                    {copiedName === r.id && <span className="nm-copied">Copied</span>}
                     {(() => {
                       // Their newest live tracker, opened in a new tab. The
                       // ring fills as they tick tasks off.

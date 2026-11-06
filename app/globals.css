@@ -1754,6 +1754,29 @@ select.cell {
   color: var(--bone-dim);
 }
 
+.checkin-row .nm-copy {
+  all: unset;
+  cursor: copy;
+}
+
+.checkin-row .nm-copy:hover {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.checkin-row .nm-copy:focus-visible {
+  outline: 1px solid var(--signal);
+  outline-offset: 2px;
+}
+
+.checkin-row .nm-copied {
+  margin-left: 0.5rem;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--signal);
+}
+
 .checkin-row .meta {
   margin-top: 0.15rem;
   font-size: 0.58rem;
