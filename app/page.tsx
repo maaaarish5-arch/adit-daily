@@ -97,6 +97,12 @@ export default function Page() {
   /* ---------------------- clock: keep the page on today ---------------------- */
 
   useEffect(() => {
+    // A reload always opens on Today, at the top. Without this the browser
+    // puts the page back where it was last scrolled, which on a shorter tab
+    // means landing at the very bottom.
+    if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+
     const k = todayKey();
     setToday(k);
     setDate(k);
