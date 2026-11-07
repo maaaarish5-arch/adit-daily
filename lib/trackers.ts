@@ -71,8 +71,8 @@ type SplitSpec = {
 
 export const SPLITS: Record<SplitKind, SplitSpec> = {
   uworld: { ask: ["Total questions", "Questions per block"], scored: true, info: false, byBlocks: false, noun: "questions", maxA: 4000, maxB: 40 },
-  nbme: { ask: ["Number of blocks", "Questions per block"], scored: true, info: false, byBlocks: true, noun: "questions", maxA: 8, maxB: 60 },
-  assessment: { ask: ["Number of blocks", "Questions per block"], scored: true, info: false, byBlocks: true, noun: "questions", maxA: 10, maxB: 60 },
+  nbme: { ask: ["Number of blocks", "Questions per block"], scored: true, info: false, byBlocks: true, noun: "questions", maxA: 15, maxB: 60 },
+  assessment: { ask: ["Number of blocks", "Questions per block"], scored: true, info: false, byBlocks: true, noun: "questions", maxA: 15, maxB: 60 },
   pages: { ask: ["Pages"], scored: false, info: true, byBlocks: false, noun: "pages", maxA: 5000, maxB: 0 },
   cards: { ask: ["Cards"], scored: false, info: true, byBlocks: false, noun: "cards", maxA: 50000, maxB: 0 },
   videos: { ask: ["Videos"], scored: false, info: true, byBlocks: false, noun: "videos", maxA: 500, maxB: 0 },
