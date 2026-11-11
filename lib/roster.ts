@@ -192,7 +192,7 @@ function matchStart(s: Pick<Student, "phaseSince">): number {
 /** Is an update owed from this student on this day? Always yes, except a
  *  Match student between their every-other-day check-ins. */
 export function checkinDue(s: Pick<Student, "phase" | "phaseSince">, day: string): boolean {
-  if (currentPhase(s) !== 5 || !day) return true;
+  if (currentPhase(s) !== 5 || !day || day >= MATCH_DAILY_FROM) return true;
   const gap = dayNumber(day) - matchStart(s);
   return gap < 0 || gap % MATCH_EVERY === 0;
 }
