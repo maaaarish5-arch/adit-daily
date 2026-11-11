@@ -4,6 +4,7 @@
 // numbers that fall out of them. Calls arrive from Cal.com by themselves; the
 // only job here is to tap what happened.
 
+import ChatLeads from "./chat-leads";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   IST,
@@ -312,6 +313,8 @@ export default function SalesView() {
           setTimeout(() => document.getElementById(`sale-${m.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 50);
         }}
       />
+
+      <ChatLeads pass={pass ?? ""} />
 
       {/* ------------------------------ the numbers ------------------------------ */}
       <div className="sales-stats">

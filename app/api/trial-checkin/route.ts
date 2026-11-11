@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isValidKey } from "@/lib/date";
 import { getTrialCheckin, putTrialCheckin, usingRedis } from "@/lib/store";
-import { cleanEntries } from "@/lib/checkin";
+import { cleanTrialEntries } from "@/lib/trial";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const saved = await putTrialCheckin(date, cleanEntries(body.entries));
+    const saved = await putTrialCheckin(date, cleanTrialEntries(body.entries));
     return NextResponse.json({ date, ...saved });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });

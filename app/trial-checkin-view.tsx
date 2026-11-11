@@ -1,14 +1,26 @@
 "use client";
 
-// Adit's Corner → Trial Checkin. A daily tick-and-note list for the students
-// whose phase is T (Trial) and nobody else. Kept apart from the Check-in tab:
-// its ticks live under their own key (/api/trial-checkin), so a tick here never
-// shows on Check-in and the other way round.
+// Adit's Corner → Trial clients check-in. Every student whose phase is T
+// (Trial), checked on three times a day: a box each for 11 AM, 4 PM and 9 PM,
+// then what came out of the update. Kept apart from the Check-in tab: its ticks
+// live under their own key (/api/trial-checkin), so a tick here never shows on
+// Check-in and the other way round.
+//
+// Sits inside the corner page and follows its date. It reports how many trial
+// clients have all three rounds, which closes the Daily Flow row.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { currentPhase, onCheckin, onDnd, longDay, type Student } from "@/lib/roster";
-import { entryFor, type Entries } from "@/lib/checkin";
-import { longDate, parseKey, shiftDays, todayKey } from "@/lib/date";
+import { onDnd, longDay, type Student } from "@/lib/roster";
+import type { Coverage } from "@/lib/checkin";
+import {
+  TRIAL_ROUNDS,
+  trialCoverage,
+  trialEntryFor,
+  trialStudents,
+  type TrialEntries,
+  type TrialEntry,
+} from "@/lib/trial";
+import { parseKey } from "@/lib/date";
 import { messageOrder } from "@/lib/timezones";
 import HomeTime from "./home-time";
 import type { TrackerSummary } from "@/lib/trackers";
@@ -22,10 +34,16 @@ function daysBetween(since: string, day: string): number {
   return Math.round((parseKey(day).getTime() - parseKey(since).getTime()) / 86_400_000);
 }
 
-export default function TrialCheckinView() {
-  const [date, setDate] = useState<string | null>(null);
+export default function TrialCheckinView({
+  date,
+  onCoverage,
+}: {
+  /** The corner's day — the list follows it. */
+  date: string;
+  onCoverage?: (c: Coverage) => void;
+}) {
   const [students, setStudents] = useState<Student[]>([]);
-  const [entries, setEntries] = useState<Entries>({});
+  const [entries, setEntries] = useState<TrialEntries>({});
   const [loading, setLoading] = useState(true);
   const [sync, setSync] = useState<SyncState>("idle");
   const [storeError, setStoreError] = useState<string | null>(null);
@@ -35,8 +53,6 @@ export default function TrialCheckinView() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => setDate(todayKey()), []);
 
   /* -------------------------------- loading -------------------------------- */
 
@@ -106,7 +122,7 @@ export default function TrialCheckinView() {
 
   /* -------------------------------- saving --------------------------------- */
 
-  const save = useCallback((d: string, next: Entries) => {
+  const save = useCallback((d: string, next: TrialEntries) => {
     setSync("saving");
     fetch("/api/trial-checkin", {
       method: "POST",
@@ -125,10 +141,9 @@ export default function TrialCheckinView() {
   }, []);
 
   const patch = useCallback(
-    (id: string, next: Partial<{ c: boolean; n: string }>) => {
-      if (!date) return;
+    (id: string, next: Partial<TrialEntry>) => {
       setEntries((prev) => {
-        const current = prev[id] ?? { c: false, n: "" };
+        const current = trialEntryFor(prev, id);
         const merged = { ...prev, [id]: { ...current, ...next } };
         pending.current = true;
         if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -141,32 +156,33 @@ export default function TrialCheckinView() {
 
   /* -------------------------------- derived -------------------------------- */
 
-  // Phase T only, and only students still on Check-in (Active or Trial). Whoever
-  // is 6 AM at home comes first, the same order Check-in uses.
+  // Whoever is 6 AM at home comes first, the same order Check-in uses.
   const rows = useMemo(() => {
     const at = new Date();
-    return students
-      .filter((s) => onCheckin(s) && currentPhase(s) === 6)
-      .sort((a, b) => messageOrder(a.tz, at) - messageOrder(b.tz, at));
+    return trialStudents(students).sort((a, b) => messageOrder(a.tz, at) - messageOrder(b.tz, at));
   }, [students]);
 
-  const owed = rows.filter((s) => !onDnd(s, date ?? ""));
-  const taken = owed.filter((s) => entryFor(entries, s.id).c).length;
-  const pct = owed.length ? Math.round((taken / owed.length) * 100) : 0;
+  const coverage = useMemo(() => trialCoverage(students, entries, date), [students, entries, date]);
+  const ready = !loading && students.length > 0;
+  useEffect(() => {
+    if (ready) onCoverage?.(coverage);
+  }, [ready, coverage, onCoverage]);
 
-  if (!date) return null;
-  const isToday = date === todayKey();
+  const owed = rows.filter((s) => !onDnd(s, date));
+  const roundsDone = owed.reduce((n, s) => n + trialEntryFor(entries, s.id).r.filter(Boolean).length, 0);
+  const pct = owed.length ? Math.round((roundsDone / (owed.length * 3)) * 100) : 0;
+
+  const toggleRound = (s: Student, i: number) => {
+    const r = [...trialEntryFor(entries, s.id).r] as TrialEntry["r"];
+    r[i] = !r[i];
+    patch(s.id, { r });
+  };
 
   return (
-    <div className="checkin" ref={rootRef}>
-      <div className="roster-head">
-        <div>
-          <h2>Trial Checkin</h2>
-          <p className="hint">
-            Daily check on every student whose phase is T. Tick the student once you have
-            checked in, and note what came out of it. Separate from the Check-in tab.
-          </p>
-        </div>
+    <section className="section trial-section" ref={rootRef}>
+      <div className="section-head">
+        <h2>Trial clients check-in</h2>
+        <span className="hair" />
         <span className="roster-sync">
           <span className="sync-dot" data-state={sync} />
           {sync === "saving"
@@ -177,6 +193,9 @@ export default function TrialCheckinView() {
                 ? "Saved"
                 : "Synced"}
         </span>
+        <span className="tally" data-complete={String(coverage.complete && owed.length > 0)}>
+          {coverage.taken}/{coverage.total}
+        </span>
       </div>
 
       {storeError && (
@@ -185,42 +204,18 @@ export default function TrialCheckinView() {
         </div>
       )}
 
-      <div className="checkin-bar">
-        <button className="btn ghost" onClick={() => setDate(shiftDays(date, -1))}>
-          ← Prev
-        </button>
-        <input
-          type="date"
-          defaultValue={date}
-          key={date}
-          onChange={(e) => e.target.value && setDate(e.target.value)}
-          aria-label="Trial check-in date"
-        />
-        <button className="btn ghost" onClick={() => setDate(shiftDays(date, 1))}>
-          Next →
-        </button>
-        {!isToday && (
-          <button className="btn ghost" onClick={() => setDate(todayKey())}>
-            Today
-          </button>
-        )}
-        <span className="checkin-date">{longDate(date)}</span>
-      </div>
-
       <div className="pulse">
         <div className="pulse-strip">
-          {owed.map((s) => (
-            <i
-              key={s.id}
-              className="tick"
-              data-on={entryFor(entries, s.id).c ? "1" : "0"}
-              title={s.name}
-            />
-          ))}
+          {owed.flatMap((s) =>
+            trialEntryFor(entries, s.id).r.map((on, i) => (
+              <i key={`${s.id}-${i}`} className="tick" data-on={on ? "1" : "0"} title={`${s.name} · ${TRIAL_ROUNDS[i].label}`} />
+            ))
+          )}
         </div>
         <div className="pulse-read">
           <span>
-            <b>{taken}</b> of {owed.length} trial students checked
+            <b>{roundsDone}</b> of {owed.length * 3} rounds done · {coverage.taken} of {owed.length}{" "}
+            trial clients on all three
           </span>
           <span>{pct}%</span>
         </div>
@@ -235,31 +230,15 @@ export default function TrialCheckinView() {
         </p>
       ) : (
         rows.map((s) => {
-          const e = entryFor(entries, s.id);
+          const e = trialEntryFor(entries, s.id);
           const dnd = onDnd(s, date);
           const t = trackers[s.id];
           const tPct = t && t.total ? Math.round((t.done / t.total) * 100) : 0;
           // Trial day 1 is the day the phase was set to T.
           const day = s.phaseSince ? daysBetween(s.phaseSince, date) + 1 : 0;
+          const all = e.r.every(Boolean);
           return (
-            <div
-              key={s.id}
-              className="checkin-row"
-              data-on={String(e.c)}
-              data-dnd={String(dnd)}
-            >
-              <button
-                className="box"
-                data-on={String(e.c)}
-                aria-pressed={e.c}
-                aria-label={`Mark ${s.name} as checked`}
-                onClick={() => patch(s.id, { c: !e.c })}
-              >
-                <svg viewBox="0 0 24 24">
-                  <polyline points="4,12 10,18 20,6" />
-                </svg>
-              </button>
-
+            <div key={s.id} className="trial-row" data-on={String(all)} data-dnd={String(dnd)}>
               <div className="who">
                 <div className="nm">
                   {s.name}
@@ -290,12 +269,32 @@ export default function TrialCheckinView() {
                 )}
               </div>
 
+              <div className="rounds">
+                {TRIAL_ROUNDS.map((round, i) => (
+                  <button
+                    key={round.id}
+                    className="round"
+                    data-on={String(e.r[i])}
+                    aria-pressed={e.r[i]}
+                    aria-label={`${s.name} checked at ${round.label}`}
+                    onClick={() => toggleRound(s, i)}
+                  >
+                    <span className="box" data-on={String(e.r[i])}>
+                      <svg viewBox="0 0 24 24">
+                        <polyline points="4,12 10,18 20,6" />
+                      </svg>
+                    </span>
+                    <small>{round.label}</small>
+                  </button>
+                ))}
+              </div>
+
               <div className="note-col">
                 <input
                   className="note"
                   value={e.n}
                   onChange={(ev) => patch(s.id, { n: ev.target.value })}
-                  placeholder="What came out of the check-in…"
+                  placeholder="What came out of the update…"
                   aria-label={`Note for ${s.name}`}
                 />
               </div>
@@ -303,6 +302,6 @@ export default function TrialCheckinView() {
           );
         })
       )}
-    </div>
+    </section>
   );
 }

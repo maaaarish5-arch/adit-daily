@@ -18,15 +18,14 @@ type SyncState = "idle" | "saving" | "saved" | "error";
 
 const PASSCODE_KEY = "adit-daily:passcode";
 
-/** The To-do tab holds everyone but Adit; Adit's items live in his Corner
- *  (Adit's Corner → To-do). Same list, same storage — only the view differs,
- *  so changing an item's owner moves it between the two. */
-export const TODO_TAB_OWNERS: readonly Owner[] = OWNERS.filter((o) => o !== "Adit");
+/** The To-do tab holds everyone, Adit included. The quick task list on the
+ *  left of Adit's Corner is the same list, showing only his open items. */
+export const TODO_TAB_OWNERS: readonly Owner[] = OWNERS;
 
 export default function TodosView({
   owners = TODO_TAB_OWNERS,
   title = "To-do",
-  blurb = "One-off work — the ops handover and everything from the planning meetings. Adit's own items are in Adit's Corner → To-do. Separate from the daily checklist, and deliberately not scored.",
+  blurb = "One-off work — the ops handover and everything from the planning meetings. Adit's quick tasks from his Corner land here too. Separate from the daily checklist, and deliberately not scored.",
 }: {
   owners?: readonly Owner[];
   title?: string;

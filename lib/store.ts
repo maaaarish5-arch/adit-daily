@@ -23,6 +23,8 @@ import {
   type Meeting,
 } from "./sales";
 import { cleanTodos, type Todo } from "./todos";
+import { EMPTY_TRIAL, parseTrialDoc, type TrialDoc, type TrialEntries } from "./trial";
+import { cleanLead, type Lead } from "./leads";
 import {
   cleanBuckets,
   cleanEvent,
@@ -365,31 +367,52 @@ export async function putCheckin(
 }
 
 /* ---------------------------- trial check-ins ----------------------------- */
-// Adit's Corner → Trial Checkin: the same {ticked, note} entries as a check-in,
-// but kept apart (`adit:trialcheckin:YYYY-MM-DD`) so ticking one never ticks
-// the other.
+// Adit's Corner → Trial clients check-in: three rounds a day per student plus
+// a note (lib/trial.ts), kept apart from Check-in (`adit:trialcheckin:<date>`)
+// so ticking one never ticks the other. Days saved with the old single tick
+// read back as the 11 AM round.
 
 const TRIAL_PREFIX = "adit:trialcheckin:";
 const TRIAL_FILE = path.join(process.cwd(), ".data", "trial-checkins.json");
 
-export async function getTrialCheckin(date: DayKey): Promise<CheckinDoc> {
+export async function getTrialCheckin(date: DayKey): Promise<TrialDoc> {
   if (usingRedis) {
-    return parseCheckin(await redisCommand(["GET", TRIAL_PREFIX + date]));
+    return parseTrialDoc(await redisCommand(["GET", TRIAL_PREFIX + date]));
   }
   assertLocal();
   try {
     const all = JSON.parse(await fs.readFile(TRIAL_FILE, "utf8"));
-    return parseCheckin(all[date]);
+    return parseTrialDoc(all[date]);
   } catch {
-    return EMPTY_CHECKIN;
+    return EMPTY_TRIAL;
   }
+}
+
+/** Several days in one round trip — the corner's month calendar scores them. */
+export async function getTrialCheckins(dates: DayKey[]): Promise<Record<DayKey, TrialDoc>> {
+  const out: Record<DayKey, TrialDoc> = {};
+  if (!dates.length) return out;
+  if (usingRedis) {
+    const raw = (await redisCommand(["MGET", ...dates.map((d) => TRIAL_PREFIX + d)])) as unknown[];
+    dates.forEach((d, i) => (out[d] = parseTrialDoc(raw?.[i])));
+    return out;
+  }
+  assertLocal();
+  let all: Record<string, unknown> = {};
+  try {
+    all = JSON.parse(await fs.readFile(TRIAL_FILE, "utf8"));
+  } catch {
+    all = {};
+  }
+  for (const d of dates) out[d] = parseTrialDoc(all[d]);
+  return out;
 }
 
 export async function putTrialCheckin(
   date: DayKey,
-  entries: Entries
-): Promise<CheckinDoc> {
-  const saved: CheckinDoc = { entries, updatedAt: new Date().toISOString() };
+  entries: TrialEntries
+): Promise<TrialDoc> {
+  const saved: TrialDoc = { entries, updatedAt: new Date().toISOString() };
   if (usingRedis) {
     await redisCommand(["SET", TRIAL_PREFIX + date, JSON.stringify(saved)]);
     return saved;
@@ -604,6 +627,48 @@ function parseTodos(raw: unknown): TodosDoc {
   } catch {
     return { todos: [], updatedAt: null };
   }
+}
+
+/* ---------------------------------- leads --------------------------------- */
+// Vault sales on chat and Mentorship leads from DMs (lib/leads.ts). One Redis
+// list, appended to — never rewritten — so two people logging at once can't
+// overwrite each other.
+
+const LEADS_KEY = "adit:leads";
+const LEADS_FILE = path.join(process.cwd(), ".data", "leads.json");
+
+export async function getLeads(): Promise<Lead[]> {
+  let raw: unknown[] = [];
+  if (usingRedis) {
+    raw = ((await redisCommand(["LRANGE", LEADS_KEY, 0, -1])) as unknown[]) ?? [];
+    raw = raw.map((r) => {
+      try {
+        return typeof r === "string" ? JSON.parse(r) : r;
+      } catch {
+        return null;
+      }
+    });
+  } else {
+    assertLocal();
+    try {
+      raw = JSON.parse(await fs.readFile(LEADS_FILE, "utf8"));
+    } catch {
+      raw = [];
+    }
+  }
+  return (Array.isArray(raw) ? raw : []).map(cleanLead).filter((l): l is Lead => Boolean(l));
+}
+
+export async function addLead(lead: Lead): Promise<Lead> {
+  if (usingRedis) {
+    await redisCommand(["RPUSH", LEADS_KEY, JSON.stringify(lead)]);
+    return lead;
+  }
+  assertLocal();
+  const all = await getLeads();
+  await fs.mkdir(path.dirname(LEADS_FILE), { recursive: true });
+  await fs.writeFile(LEADS_FILE, JSON.stringify([...all, lead], null, 2), "utf8");
+  return lead;
 }
 
 /* --------------------------------- corners -------------------------------- */

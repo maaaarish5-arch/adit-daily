@@ -6,6 +6,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Sop } from "./sop";
+import TrialCheckinView from "./trial-checkin-view";
+import LeadForms from "./lead-forms";
+import QuickTasks from "./quick-tasks";
+import { leadKindLabel, type Lead } from "@/lib/leads";
 import {
   clockKey,
   cornerClockLines,
@@ -72,6 +76,8 @@ export default function CornerView({
   const [copied, setCopied] = useState(false);
   const [storeError, setStoreError] = useState<string | null>(null);
   const [coverage, setCoverage] = useState<Coverage>(UNKNOWN_COVERAGE);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const fromTrial = corner.coverageFrom === "trial";
 
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -110,7 +116,10 @@ export default function CornerView({
 
   // The check-in row is read off the roster and the day's Check-in register,
   // exactly like Today's sweep. Reloaded whenever the window regains focus.
-  const usesCheckin = corner.sections.some((s) => s.tasks.some((t) => t.coverage));
+  // A corner reading its own Trial clients check-in gets the number from that
+  // list instead (see TrialCheckinView below).
+  const usesCheckin =
+    !fromTrial && corner.sections.some((s) => s.tasks.some((t) => t.coverage));
   useEffect(() => {
     if (!date || !usesCheckin) return;
     const load = () =>
@@ -128,6 +137,11 @@ export default function CornerView({
     window.addEventListener("focus", load);
     return () => window.removeEventListener("focus", load);
   }, [date, usesCheckin]);
+
+  // A new day's trial list reports its own number; don't show the last day's meanwhile.
+  useEffect(() => {
+    if (fromTrial) setCoverage(UNKNOWN_COVERAGE);
+  }, [date, fromTrial]);
 
   const loadMonth = useCallback(
     (m: string) => {
@@ -263,6 +277,15 @@ export default function CornerView({
       "",
       `Outstanding:\n${stillOpen.length ? stillOpen.map((o) => `  · ${o}`).join("\n") : "  Nothing — full sweep."}`,
       "",
+      corner.leads
+        ? `High leverage:\n${
+            leads.length
+              ? leads
+                  .map((l) => `  · ${leadKindLabel(l.kind)} — ${[l.name, l.payMode, l.amount].filter(Boolean).join(" · ")}`)
+                  .join("\n")
+              : "  Nothing logged."
+          }\n`
+        : null,
       `Notes:\n${notes.trim() || "—"}`,
       "",
       `— ${corner.name}`,
@@ -374,11 +397,26 @@ export default function CornerView({
                   <i>/{coverage.total}</i>
                 </span>
                 <span className="sweep-noun">
-                  {coverage.known ? "active students ticked" : "reading the roster…"}
+                  {!coverage.known
+                    ? "reading the roster…"
+                    : fromTrial
+                      ? "trial clients on all three rounds"
+                      : "active students ticked"}
                 </span>
-                <button className="pill" onClick={onOpenCheckin}>
-                  Open check-in
-                </button>
+                {fromTrial ? (
+                  <button
+                    className="pill"
+                    onClick={() =>
+                      document.getElementById("trial-checkin")?.scrollIntoView({ behavior: "smooth" })
+                    }
+                  >
+                    Go to the list
+                  </button>
+                ) : (
+                  <button className="pill" onClick={onOpenCheckin}>
+                    Open check-in
+                  </button>
+                )}
               </div>
               <div className="sweep-bar">
                 <i
@@ -442,7 +480,9 @@ export default function CornerView({
           aria-pressed={isDone}
           title={
             task.coverage
-              ? "Closes itself once every active student is ticked on the check-in"
+              ? fromTrial
+                ? "Closes itself once every trial client has all three rounds ticked"
+                : "Closes itself once every active student is ticked on the check-in"
               : undefined
           }
           aria-label={
@@ -554,6 +594,8 @@ export default function CornerView({
             })}
           </div>
         </section>
+
+        {corner.taskOwner && <QuickTasks owner={corner.taskOwner} />}
       </aside>
 
       <div>
@@ -633,7 +675,9 @@ export default function CornerView({
         ) : corner.sections.length === 0 ? (
           <p className="sop-pending corner-pending">{corner.pending}</p>
         ) : (
-          corner.sections.map((section, si) => {
+          <>
+          {corner.flowTitle && <h2 className="flow-title">{corner.flowTitle}</h2>}
+          {corner.sections.map((section, si) => {
             const skipped = isCornerSectionSkipped(section, ticks);
             const sectionDone = section.tasks.filter((t) =>
               isCornerTaskDone(corner, t, ticks, coverage)
@@ -668,7 +712,14 @@ export default function CornerView({
                 {section.tasks.map((task) => renderTask(task, section))}
               </section>
             );
-          })
+          })}
+          {corner.leads && <LeadForms date={date} onLeads={setLeads} />}
+          {fromTrial && (
+            <div id="trial-checkin">
+              <TrialCheckinView date={date} onCoverage={setCoverage} />
+            </div>
+          )}
+          </>
         )}
 
         <section className="closeout">

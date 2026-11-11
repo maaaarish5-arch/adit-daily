@@ -34,6 +34,18 @@ export type Corner = {
   sections: Section[];
   /** Shown when the checklist has not been written yet. */
   pending?: string;
+  /**
+   * Where a `coverage` row reads from. "checkin" (the default) is the Check-in
+   * tab's register; "trial" is the Trial clients check-in on the corner itself,
+   * done once every trial client has all three rounds ticked.
+   */
+  coverageFrom?: "checkin" | "trial";
+  /** Heading over the checklist, when the rows sit under one name. */
+  flowTitle?: string;
+  /** The High leverage forms under the checklist (lib/leads.ts). */
+  leads?: boolean;
+  /** The quick task list on the left (this person's items on the To-do list). */
+  taskOwner?: "Adit";
 };
 
 /* --------------------------------- clock ---------------------------------- */
@@ -119,11 +131,46 @@ export const CORNERS: Corner[] = [
   {
     id: "adit",
     name: "Adit",
-    blurb: "Adit's own day — clock, checklist and close-out.",
+    blurb: "The things Adit gets paid for — the bare minimum, every single day.",
     sendTo: "Dr. Marish",
-    pending:
-      "Adit's checklist is still being written. The clock, grade and close-out work today; the rows land here once the list is settled.",
-    sections: [],
+    coverageFrom: "trial",
+    flowTitle: "Daily Flow",
+    leads: true,
+    taskOwner: "Adit",
+    sections: [
+      {
+        id: "ad-mandatory",
+        title: "Mandatory results",
+        tasks: [
+          {
+            id: "ad-trial",
+            label: "All trial clients checked in on thrice a day — 11 AM, 4 PM, 9 PM",
+            detail:
+              "Closes itself once every trial client has all three rounds ticked in Trial clients check-in below.",
+            coverage: true,
+          },
+          ...(
+            [
+              ["ad-ch-main-ig", "Main IG account"],
+              ["ad-ch-vault-ig", "Vault IG account"],
+              ["ad-ch-adit-wa", "Adit's WhatsApp Business"],
+              ["ad-ch-company-wa", "Company's WhatsApp Business"],
+            ] as const
+          ).map(
+            ([id, label]): Task => ({
+              id,
+              label,
+              detail: "Tap + every time you finish one cycle of clearing it. Three a day.",
+              counter: { target: 3, noun: "cycles cleared" },
+            })
+          ),
+          {
+            id: "ad-meetings",
+            label: "All of the next day's meetings confirmed",
+          },
+        ],
+      },
+    ],
   },
   {
     id: "shreeman",

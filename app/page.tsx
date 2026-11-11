@@ -7,7 +7,6 @@ import SalesView from "./sales-view";
 import TrackersView from "./trackers-view";
 import TodosView from "./todos-view";
 import RemindersView from "./reminders-view";
-import TrialCheckinView from "./trial-checkin-view";
 import RemindersDue from "./reminders-due";
 import CornerView from "./corner-view";
 import { Sop } from "./sop";
@@ -77,8 +76,8 @@ export default function Page() {
   const [date, setDate] = useState<string | null>(null);
 
   const [tab, setTab] = useState<Tab>("today");
-  // Adit's Corner has four pages: the daily checklist, his to-dos, Reminders and Trial Checkin.
-  const [aditPage, setAditPage] = useState<"daily" | "todo" | "reminders" | "trial">("daily");
+  // Today has two pages: the daily checklist and Reminders (day by day for 30 days).
+  const [todayPage, setTodayPage] = useState<"daily" | "reminders">("daily");
   const [ticks, setTicks] = useState<Ticks>({});
   const [notes, setNotes] = useState("");
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -687,36 +686,24 @@ export default function Page() {
         </div>
       )}
 
-      {tab === "adit" && <RemindersDue key="adit-due" />}
+      {tab === "today" && <RemindersDue key="today-due" />}
 
-      {tab === "adit" && (
+      {tab === "today" && (
         <nav className="subtabs">
-          <button data-on={String(aditPage === "daily")} onClick={() => setAditPage("daily")}>
+          <button data-on={String(todayPage === "daily")} onClick={() => setTodayPage("daily")}>
             Daily
           </button>
-          <button data-on={String(aditPage === "todo")} onClick={() => setAditPage("todo")}>
-            To-do
-          </button>
-          <button data-on={String(aditPage === "reminders")} onClick={() => setAditPage("reminders")}>
+          <button
+            data-on={String(todayPage === "reminders")}
+            onClick={() => setTodayPage("reminders")}
+          >
             Reminders
-          </button>
-          <button data-on={String(aditPage === "trial")} onClick={() => setAditPage("trial")}>
-            Trial Checkin
           </button>
         </nav>
       )}
 
-      {tab === "adit" && aditPage === "trial" ? (
-        <TrialCheckinView />
-      ) : tab === "adit" && aditPage === "reminders" ? (
+      {tab === "today" && todayPage === "reminders" ? (
         <RemindersView />
-      ) : tab === "adit" && aditPage === "todo" ? (
-        <TodosView
-          key="adit-todo"
-          owners={["Adit"]}
-          title="Adit's to-do"
-          blurb="Adit's one-off work, moved here from the To-do tab. Ticked once and done; not part of the daily score. Dated items also show on Reminders."
-        />
       ) : CORNERS.some((c) => c.id === tab) ? (
         <CornerView
           key={tab}

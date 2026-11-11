@@ -1,6 +1,6 @@
 "use client";
 
-// Adit's Corner → Reminders. Everything due, day by day: payments, dated
+// Today → Reminders. Everything due, day by day: payments, dated
 // to-dos, sales follow-ups, exams and DND ends. Read-only except for to-dos,
 // which can be ticked or added here (they are the same rows as the To-do tab).
 

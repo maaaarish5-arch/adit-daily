@@ -1,4 +1,4 @@
-// Reminders — Adit's Corner, day by day.
+// Reminders — Today → Reminders, day by day.
 //
 // Nothing here is stored. Every row is read off data the app already keeps:
 //   payment   an unpaid instalment's due date (Students tab)

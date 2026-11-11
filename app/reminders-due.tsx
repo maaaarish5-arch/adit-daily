@@ -1,6 +1,6 @@
 "use client";
 
-// The panel on top of Adit's Corner: what to check on one day (today unless
+// The panel on top of Today: what to check on one day (today unless
 // paged), in the same shape as "Due today" on the Students tab. Overdue items
 // sit under today's so nothing missed drops out of sight.
 
