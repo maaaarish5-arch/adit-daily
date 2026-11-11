@@ -15,6 +15,7 @@ export default function QuickTasks({ owner }: { owner: Owner }) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [onlyOpen, setOnlyOpen] = useState(false);
   const busy = useRef(false);
 
   const load = useCallback(() => {
@@ -83,12 +84,21 @@ export default function QuickTasks({ owner }: { owner: Owner }) {
   const mine = todos.filter(
     (t) => t.owner === owner && (!t.done || new Date(t.doneAt).toDateString() === today)
   );
+  const openCount = mine.filter((t) => !t.done).length;
+  const shown = onlyOpen ? mine.filter((t) => !t.done) : mine;
 
   return (
     <section className="quick-tasks">
-      <div className="month-head">
-        <span>Tasks</span>
-        <span>{mine.filter((t) => !t.done).length} open</span>
+      <div className="quick-head">
+        <h3>Tasks</h3>
+        <button
+          className="pill"
+          data-on={String(onlyOpen)}
+          aria-pressed={onlyOpen}
+          onClick={() => setOnlyOpen((v) => !v)}
+        >
+          {onlyOpen ? `Outstanding · ${openCount}` : `Show outstanding · ${openCount}`}
+        </button>
       </div>
       <input
         className="quick-add"
@@ -101,11 +111,11 @@ export default function QuickTasks({ owner }: { owner: Owner }) {
       {error && <p className="quick-error">Not saved — check the passcode.</p>}
       {loading ? (
         <p className="quick-empty">Loading…</p>
-      ) : mine.length === 0 ? (
-        <p className="quick-empty">Nothing open.</p>
+      ) : shown.length === 0 ? (
+        <p className="quick-empty">Nothing outstanding.</p>
       ) : (
         <ul>
-          {mine.map((t) => (
+          {shown.map((t) => (
             <li key={t.id} data-done={String(t.done)}>
               <button
                 className="box"

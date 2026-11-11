@@ -4830,11 +4830,35 @@ select.cell {
   margin-left: auto;
 }
 
-/* A rail carrying the task list can outgrow the screen; let it scroll by itself. */
-@media (min-width: 901px) {
-  .rail:has(.quick-tasks) {
-    max-height: calc(100vh - 2 * clamp(1.5rem, 4vw, 3rem));
-    overflow-y: auto;
-    scrollbar-width: thin;
-  }
+/* Adit's rail is just the task list. Not pinned, so a long list grows with the
+   page instead of needing its own scrollbar. */
+.rail-tasks {
+  position: static;
+  align-self: start;
+}
+
+.rail-tasks .quick-tasks {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.quick-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.quick-head h3 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.4rem;
+  color: var(--bone);
+  margin: 0;
+}
+
+.quick-tasks li span {
+  overflow-wrap: anywhere;
 }

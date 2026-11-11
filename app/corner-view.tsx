@@ -271,7 +271,7 @@ export default function CornerView({
       score.total
         ? `Completed: ${score.done}/${score.total} (${score.percent}%) — ${score.grade} day`
         : null,
-      `Clock:\n${cornerClockLines(ticks).join("\n")}`,
+      corner.taskOwner ? null : `Clock:\n${cornerClockLines(ticks).join("\n")}`,
       "",
       `Done:\n${done.length ? done.map((d) => `  · ${d}`).join("\n") : "  —"}`,
       "",
@@ -500,9 +500,18 @@ export default function CornerView({
   };
 
   const shiftStates = cornerShiftStates(ticks);
+  // Adit's Corner (the one with a task list) has no clock: no stamps, no
+  // never-clocked-in warnings, no clock lines in the close-out.
+  const showClock = !corner.taskOwner;
 
   return (
     <div className="columns">
+      {corner.taskOwner ? (
+        // Adit's rail is just his task list — no date block, score or calendar.
+        <aside className="rail rail-tasks">
+          <QuickTasks owner={corner.taskOwner} />
+        </aside>
+      ) : (
       <aside className="rail">
         <div className="weekday">{weekdayName(date)}</div>
         <div className="daynum">
@@ -595,8 +604,8 @@ export default function CornerView({
           </div>
         </section>
 
-        {corner.taskOwner && <QuickTasks owner={corner.taskOwner} />}
       </aside>
+      )}
 
       <div>
         <div className="corner-head">
@@ -620,6 +629,7 @@ export default function CornerView({
           </div>
         )}
 
+        {showClock && (
         <section className="clock">
           <div className="clock-head">
             <h3>Clock</h3>
@@ -669,6 +679,7 @@ export default function CornerView({
             ))}
           </div>
         </section>
+        )}
 
         {loading ? (
           <p className="skeleton">Loading {longDate(date)}…</p>
@@ -726,11 +737,11 @@ export default function CornerView({
           <h3>Daily close-out</h3>
           <p className="hint">
             Three parts: Done (ticked rows), Outstanding (unticked rows) and your
-            Notes. Clock times go in automatically. Generate it, copy it, send it
+            Notes.{showClock && " Clock times go in automatically."} Generate it, copy it, send it
             to {corner.sendTo}.
           </p>
 
-          {(() => {
+          {showClock && (() => {
             const missing = shiftStates.filter((st) => !st.in);
             const openShifts = shiftStates.filter((st) => st.open);
             if (!missing.length && !openShifts.length) return null;
