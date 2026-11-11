@@ -4862,3 +4862,41 @@ select.cell {
 .quick-tasks li span {
   overflow-wrap: anywhere;
 }
+
+.quick-tasks li span {
+  flex: 1;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.quick-act {
+  background: transparent;
+  border: 1px solid var(--rule);
+  color: var(--bone-faint);
+  font-size: 0.66rem;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  cursor: pointer;
+}
+
+.quick-act:hover {
+  color: var(--bone);
+  border-color: var(--bone-faint);
+}
+
+.quick-act.danger {
+  color: var(--rust);
+  border-color: currentColor;
+}
+
+.quick-edit {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.78rem;
+  padding: 0.15rem 0.35rem;
+}

@@ -3,7 +3,9 @@
 // The task list on the left of Adit's Corner: type a task, press Enter, tick it
 // off. It is the same list as the To-do tab (his items, owner "Adit"), so
 // nothing is kept twice — anything added here shows there, and the other way
-// round. Not part of the daily score.
+// round. Not part of the daily score. Edit renames a task in place (Enter or
+// leaving the field saves, Esc cancels); Remove asks once more inline before
+// it deletes, so a stray tap never loses a task.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { blankTodo, type Owner, type Todo } from "@/lib/todos";
@@ -16,6 +18,8 @@ export default function QuickTasks({ owner }: { owner: Owner }) {
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [onlyOpen, setOnlyOpen] = useState(false);
+  const [editing, setEditing] = useState<{ id: string; title: string } | null>(null);
+  const [confirming, setConfirming] = useState<string | null>(null);
   const busy = useRef(false);
 
   const load = useCallback(() => {
@@ -79,6 +83,20 @@ export default function QuickTasks({ owner }: { owner: Owner }) {
       )
     );
 
+  const saveEdit = () => {
+    if (!editing) return;
+    const { id, title } = editing;
+    setEditing(null);
+    const clean = title.trim();
+    if (!clean) return; // an emptied field keeps the old title
+    write((latest) => latest.map((t) => (t.id === id ? { ...t, title: clean } : t)));
+  };
+
+  const remove = (id: string) => {
+    setConfirming(null);
+    write((latest) => latest.filter((t) => t.id !== id));
+  };
+
   // Open items, plus anything ticked today so a mis-tap can be undone.
   const today = new Date().toDateString();
   const mine = todos.filter(
@@ -128,7 +146,56 @@ export default function QuickTasks({ owner }: { owner: Owner }) {
                   <polyline points="4,12 10,18 20,6" />
                 </svg>
               </button>
-              <span>{t.title}</span>
+              {editing?.id === t.id ? (
+                <input
+                  className="quick-edit"
+                  autoFocus
+                  value={editing.title}
+                  aria-label="Edit task"
+                  onChange={(e) => setEditing({ id: t.id, title: e.target.value })}
+                  onBlur={saveEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveEdit();
+                    if (e.key === "Escape") setEditing(null);
+                  }}
+                />
+              ) : (
+                <span>{t.title}</span>
+              )}
+              {editing?.id !== t.id && (
+                <div className="quick-actions">
+                  {confirming === t.id ? (
+                    <>
+                      <button className="quick-act danger" onClick={() => remove(t.id)}>
+                        Remove
+                      </button>
+                      <button className="quick-act" onClick={() => setConfirming(null)}>
+                        Keep
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="quick-act"
+                        aria-label={`Edit "${t.title}"`}
+                        onClick={() => {
+                          setConfirming(null);
+                          setEditing({ id: t.id, title: t.title });
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="quick-act"
+                        aria-label={`Remove "${t.title}"`}
+                        onClick={() => setConfirming(t.id)}
+                      >
+                        ×
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </li>
           ))}
         </ul>
