@@ -107,17 +107,12 @@ export default function LeadForms({
   return (
     <section className="section leads">
       <div className="section-head">
-        <h2>High leverage</h2>
+        <h2>Lead Corner</h2>
         <span className="hair" />
         <span className="tally" data-complete={String(today.length > 0)}>
           {today.length} logged
         </span>
       </div>
-      <p className="hint leads-hint">
-        Rewarding work on top of the bare minimum. Each save goes into the sales database
-        (Sales Calendar → From chat &amp; DMs). Not part of the score.
-      </p>
-
       {LEAD_KINDS.map((k) => {
         const mine = today.filter((l) => l.kind === k.id);
         return (

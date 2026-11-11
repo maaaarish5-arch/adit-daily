@@ -4851,6 +4851,34 @@ select.cell {
   flex-wrap: wrap;
 }
 
+.quick-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.7rem;
+}
+
+.quick-tab {
+  flex: 1;
+  border: 1px solid var(--rule-strong);
+  padding: 0.35rem 0.6rem 0.3rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bone-faint);
+  transition: color 160ms, border-color 160ms, background 160ms;
+}
+
+.quick-tab:hover {
+  color: var(--bone);
+  border-color: var(--bone-dim);
+}
+
+.quick-tab[data-on="true"] {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--ink);
+}
+
 .quick-head h3 {
   font-family: var(--font-display);
   font-weight: 400;

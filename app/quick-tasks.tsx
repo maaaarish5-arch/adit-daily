@@ -1,7 +1,7 @@
 "use client";
 
 // The task list on the left of Adit's Corner: type a task, press Enter, tick it
-// off. It is the same list as the To-do tab (his items, owner "Adit"), so
+// off (ticked tasks move to the Finished tab). It is the same list as the To-do tab (his items, owner "Adit"), so
 // nothing is kept twice — anything added here shows there, and the other way
 // round. Not part of the daily score. Edit renames a task in place (Enter or
 // leaving the field saves, Esc cancels); Remove asks once more inline before
@@ -17,7 +17,7 @@ export default function QuickTasks({ owner }: { owner: Owner }) {
   const [draft, setDraft] = useState("");
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [onlyOpen, setOnlyOpen] = useState(false);
+  const [tab, setTab] = useState<"open" | "finished">("open");
   const [editing, setEditing] = useState<{ id: string; title: string } | null>(null);
   const [confirming, setConfirming] = useState<string | null>(null);
   const busy = useRef(false);
@@ -97,26 +97,33 @@ export default function QuickTasks({ owner }: { owner: Owner }) {
     write((latest) => latest.filter((t) => t.id !== id));
   };
 
-  // Open items, plus anything ticked today so a mis-tap can be undone.
-  const today = new Date().toDateString();
-  const mine = todos.filter(
-    (t) => t.owner === owner && (!t.done || new Date(t.doneAt).toDateString() === today)
-  );
-  const openCount = mine.filter((t) => !t.done).length;
-  const shown = onlyOpen ? mine.filter((t) => !t.done) : mine;
+  // Two views: Open (default) and Finished. Ticking a task moves it to
+  // Finished at once; unticking it there brings it back to Open.
+  const mine = todos.filter((t) => t.owner === owner);
+  const openList = mine.filter((t) => !t.done);
+  const finishedList = mine
+    .filter((t) => t.done)
+    .sort((a, b) => (b.doneAt || "").localeCompare(a.doneAt || ""));
+  const shown = tab === "open" ? openList : finishedList;
 
   return (
     <section className="quick-tasks">
       <div className="quick-head">
         <h3>Tasks</h3>
-        <button
-          className="pill"
-          data-on={String(onlyOpen)}
-          aria-pressed={onlyOpen}
-          onClick={() => setOnlyOpen((v) => !v)}
-        >
-          {onlyOpen ? `Outstanding · ${openCount}` : `Show outstanding · ${openCount}`}
-        </button>
+      </div>
+      <div className="quick-tabs" role="tablist" aria-label="Task view">
+        {(["open", "finished"] as const).map((k) => (
+          <button
+            key={k}
+            role="tab"
+            className="quick-tab"
+            data-on={String(tab === k)}
+            aria-selected={tab === k}
+            onClick={() => setTab(k)}
+          >
+            {k === "open" ? "Open" : "Finished"} · {k === "open" ? openList.length : finishedList.length}
+          </button>
+        ))}
       </div>
       <input
         className="quick-add"
@@ -130,7 +137,7 @@ export default function QuickTasks({ owner }: { owner: Owner }) {
       {loading ? (
         <p className="quick-empty">Loading…</p>
       ) : shown.length === 0 ? (
-        <p className="quick-empty">Nothing outstanding.</p>
+        <p className="quick-empty">{tab === "open" ? "Nothing open." : "Nothing finished yet."}</p>
       ) : (
         <ul>
           {shown.map((t) => (
