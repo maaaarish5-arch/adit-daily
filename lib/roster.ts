@@ -160,7 +160,10 @@ export function onDnd(s: Pick<Student, "dndFrom" | "dndUntil">, day: string): bo
 }
 
 /* ------------------------------ match rhythm ------------------------------ */
-// Match students give an update every other day, not daily. The first check-in
+// Match students gave an update every other day until 10 Nov 2026; from
+// MATCH_DAILY_FROM (11 Nov 2026, Dr. Marish's call) they are daily again, so
+// every day is a check-in day. The every-other-day rhythm below still applies
+// to days before that, so past check-ins read as they did. The first check-in
 // day is 11 Oct 2026 (the rule began on the 10th), or the day after they were
 // moved to Match if that is later; then every second day from there. On the
 // days between they owe no update, so Check-in leaves them out of the list, the
@@ -169,6 +172,7 @@ export function onDnd(s: Pick<Student, "dndFrom" | "dndUntil">, day: string): bo
 
 export const MATCH_EVERY = 2;
 export const MATCH_FROM = "2026-10-11";
+export const MATCH_DAILY_FROM = "2026-11-11";
 
 function dayNumber(iso: string): number {
   const [y, m, d] = iso.split("-").map(Number);

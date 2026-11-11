@@ -74,7 +74,7 @@ top — ink background, bone text, one lime signal colour. Match what is there.
 | `lib/tasks.ts` | **The daily checklist and the whole SOP.** Start here. |
 | `lib/roster.ts` | Student records, instalments, derived payment status. `currentPhase()` derives P1→P2 after 14 days and P3→P4 from 7 days before `examDate` (P3 may carry an exam date). |
 | `lib/roster-order.ts` | Students tab sort options. Left always sinks to the bottom. The order is held between sorts so rows don't jump mid-edit. |
-| `lib/checkin.ts` | Daily "did we take an update" check-ins. Match students are owed one **every other day** from 11 Oct 2026 (or the day after moving to Match): see `checkinDue()` in `lib/roster.ts`. Off days drop them from the list and the count. |
+| `lib/checkin.ts` | Daily "did we take an update" check-ins. Match students were owed one **every other day** from 11 Oct 2026 to 10 Nov 2026; from 11 Nov 2026 they are **daily** again (`MATCH_DAILY_FROM` in `lib/roster.ts`, see `checkinDue()`). Earlier days keep the old rhythm. |
 | `lib/shifts.ts` | Clock in/out, the two IST shift windows |
 | `lib/activity.ts` | Append-only time log and presence buckets |
 | `lib/store.ts` | All Redis reads and writes. Change storage only here. |
