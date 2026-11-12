@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRoster, updateRoster, usingRedis } from "@/lib/store";
-import { cleanRoster } from "@/lib/roster";
+import { cleanRoster, type Student } from "@/lib/roster";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +62,20 @@ export async function POST(req: Request) {
           },
         ])
       );
-      return incoming.map((s) => ({ ...s, ...kept.get(s.id) }));
+      // A row with no name is never saved. A brand-new blank row (someone
+      // pressed Add student and has not typed yet) is simply left out. A
+      // student who already has a name keeps it if the field is cleared
+      // mid-edit, so retyping never loses their notes or payments.
+      const storedName = new Map(stored.map((s) => [s.id, s.name]));
+      const named: Student[] = [];
+      for (const s of incoming) {
+        if (s.name.trim()) named.push(s);
+        else {
+          const before = storedName.get(s.id);
+          if (before?.trim()) named.push({ ...s, name: before });
+        }
+      }
+      return named.map((s) => ({ ...s, ...kept.get(s.id) }));
     });
     if (refused) {
       return NextResponse.json(
