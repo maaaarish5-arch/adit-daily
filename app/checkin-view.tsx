@@ -709,7 +709,7 @@ export default function CheckinView() {
                           className="phase-toggle phase-edit"
                           role="radiogroup"
                           aria-label={`Phase for ${r.name}`}
-                          title={`${phaseName(p)}${
+                          title={`Triple-click to change. ${phaseName(p)}${
                             left !== null
                               ? ` — moves to Phase 2 in ${left}d`
                               : autoP4
@@ -726,9 +726,14 @@ export default function CheckinView() {
                               aria-checked={p === x}
                               data-phase={x}
                               data-on={String(p === x)}
-                              // Clicking P4 on an automatic P4 makes it stick.
-                              onClick={() =>
-                                (p !== x || (autoP4 && x === 4)) && changePhase(r.id, x)
+                              // Triple-click only (detail 3), so a stray click or
+                              // double-click never moves a student. Keyboard
+                              // presses (detail 0) still work. Clicking P4 on an
+                              // automatic P4 makes it stick.
+                              onClick={(e) =>
+                                (e.detail === 3 || e.detail === 0) &&
+                                (p !== x || (autoP4 && x === 4)) &&
+                                changePhase(r.id, x)
                               }
                             >
                               {PHASE_TAGS[x]}
